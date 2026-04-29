@@ -3,7 +3,7 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
-export default async function patchViteConfig() {
+export default function patchViteConfig() {
   const cwd = process.env.VITE_PATCHER_CWD || process.cwd()
 
   // 1. Find the vite.config file
