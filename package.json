@@ -16,7 +16,7 @@
     "url": "https://github.com/node-ecosystem/vite-patcher/issues"
   },
   "bin": {
-    "patch-pwa": "./dist/bin/pwa.mjs"
+    "vite-pwa": "./dist/bin/vite-pwa.mjs"
   },
   "scripts": {
     "build": "tsdown",

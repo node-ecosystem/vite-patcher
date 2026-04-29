@@ -5,7 +5,7 @@ import { resolve } from 'node:path'
 import { loadFile, writeFile, parseModule } from 'magicast'
 import { addVitePlugin } from 'magicast/helpers'
 
-async function patchViteConfig() {
+export default async function patchViteConfig() {
   // 1. Find the vite.config file
   const targetPath = getViteConfigPath()
 
@@ -98,5 +98,3 @@ const getViteConfigPath = () => {
     }
   }
 }
-
-patchViteConfig()

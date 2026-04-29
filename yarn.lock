@@ -1851,7 +1851,7 @@ __metadata:
   peerDependencies:
     vite: "*"
   bin:
-    patch-pwa: ./src/patches/pwa.js
+    vite-pwa: ./dist/bin/vite-pwa.mjs
   languageName: unknown
   linkType: soft
 
