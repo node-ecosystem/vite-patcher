@@ -2,8 +2,6 @@
 
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { loadFile, writeFile, parseModule } from 'magicast'
-import { addVitePlugin } from 'magicast/helpers'
 
 export default async function patchViteConfig() {
   const cwd = process.env.VITE_PATCHER_CWD || process.cwd()
@@ -19,29 +17,6 @@ export default async function patchViteConfig() {
   console.log(`⏳ Patching file ${targetPath}…`)
 
   try {
-    // Load the abstract syntax tree (AST) of the file
-    const mod = await loadFile(targetPath)
-
-    // Add the import manually
-    mod.imports.$add({
-      from: 'vite-plugin-pwa',
-      name: 'VitePWA',
-      imported: 'VitePWA'
-    })
-
-    // Find the configuration object in the original file
-    // Supports "export default defineConfig({...})" or "export default {...}"
-    const configObj = (mod.exports.default.$type === 'function-call' || mod.exports.default.$type === 'call')
-      ? mod.exports.default.$args[0]
-      : mod.exports.default
-
-    // Ensure the plugins array exists
-    // We only touch the AST for plugins if it doesn't exist, to preserve magicast array layout.
-    const hadPlugins = !!configObj.plugins
-    if (!hadPlugins) {
-      configObj.plugins = []
-    }
-
     const isTypescript = targetPath.endsWith('.ts')
 
     // Generate our VitePWA code as a literal string to insert manually
@@ -157,15 +132,14 @@ export default async function patchViteConfig() {
             let formattedPluginCode = pluginCode.split('\n').map((line, idx) => {
               if (idx === 0) return line
               // pluginCode is currently indented with 2 spaces for each indent level.
-              const spacesMatch = line.match(/^[ ]+/)
-              const spaceCount = spacesMatch ? spacesMatch[0].length : 0
-              if (indentUnit === '\t') {
-                const extraIndent = '\t'.repeat(Math.floor(spaceCount / 2))
-                return extraIndent + line.substring(spaceCount)
-              } else {
-                const extraIndent = ' '.repeat(Math.floor(spaceCount / 2) * indentUnit.length)
-                return extraIndent + line.substring(spaceCount)
-              }
+              const spaceCount = line.match(/^[ ]+/)?.[0].length || 0
+              const multiplier = Math.floor(spaceCount / 2)
+
+              const extraIndent = indentUnit === '\t'
+                ? '\t'.repeat(multiplier)
+                : ' '.repeat(multiplier * indentUnit.length)
+
+              return extraIndent + line.substring(spaceCount)
             }).join(eol + innerIndent)
 
             let insertStr = hasItems && before.match(/\s$/)
