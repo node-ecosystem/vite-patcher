@@ -23,9 +23,6 @@
     "pwa": "yarn node ./src/bin/vite-patcher.mjs pwa",
     "od": "yarn outdated"
   },
-  "dependencies": {
-    "magicast": "^0.5.2"
-  },
   "devDependencies": {
     "@yarnpkg/sdks": "^3.2.3",
     "tsdown": "^0.21.10",
