@@ -10,11 +10,11 @@ import { dirname } from 'node:path'
 
 const execAsync = promisify(exec)
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const PWA_SCRIPT = join(__dirname, '../src/patches/pwa.js')
+const PWA_SCRIPT = join(__dirname, '../src/bin/vite-patcher.mjs')
 
-describe('pwa.js patch script', () => {
+describe('pwa.mjs patch script', () => {
   const runScriptInDir = async (cwd) => {
-    return execAsync(`node "${PWA_SCRIPT}"`, {
+    return execAsync(`node "${PWA_SCRIPT}" pwa`, {
       env: { ...process.env, VITE_PATCHER_CWD: cwd }
     })
   }
