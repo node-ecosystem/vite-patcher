@@ -96,17 +96,17 @@ export default async function patchViteConfig() {
         } else if (char === ']' || char === '}' || char === ')') {
           depth--
           if (depth === 0) {
-            const before = generatedCode.substring(0, i)
+            let before = generatedCode.substring(0, i)
             const after = generatedCode.substring(i)
 
             let innerCode = before.substring(startIndex)
             const hasItems = innerCode.trim().length > 0
 
-            let insertStr = ''
             if (hasItems && !innerCode.trimEnd().endsWith(',')) {
-              insertStr += ','
+              before = `${before.trimEnd()},`
             }
-            insertStr += eol + '    ' + pluginCode.split('\n').join(eol + '    ') + eol + '  '
+
+            let insertStr = `${eol}    ${pluginCode.split('\n').join(eol + '    ')}${eol}  `
 
             generatedCode = before + insertStr + after
             break
