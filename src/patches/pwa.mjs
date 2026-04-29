@@ -20,7 +20,8 @@ export default async function patchViteConfig() {
     const isTypescript = targetPath.endsWith('.ts')
 
     // Generate our VitePWA code as a literal string to insert manually
-    const pluginCode = `...(process.env.NODE_ENV === 'production' ? [VitePWA({
+    const pluginCode = `
+...(process.env.NODE_ENV === 'production' ? [VitePWA({
   registerType: 'autoUpdate',
   devOptions: {
     type: 'module'
@@ -142,11 +143,9 @@ export default async function patchViteConfig() {
               return extraIndent + line.substring(spaceCount)
             }).join(eol + innerIndent)
 
-            let insertStr = hasItems && before.match(/\s$/)
-              ? `${innerIndent}${formattedPluginCode}${eol}${baseIndent}`
-              : `${eol}${innerIndent}${formattedPluginCode}${eol}${baseIndent}`
+            let insertStr = `${formattedPluginCode}${eol}${baseIndent}`
 
-            generatedCode = before + insertStr + after
+            generatedCode = before.trimEnd() + insertStr + after
             break
           }
         }
