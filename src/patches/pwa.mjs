@@ -6,8 +6,10 @@ import { loadFile, writeFile, parseModule } from 'magicast'
 import { addVitePlugin } from 'magicast/helpers'
 
 export default async function patchViteConfig() {
+  const cwd = process.env.VITE_PATCHER_CWD || process.cwd()
+
   // 1. Find the vite.config file
-  const targetPath = getViteConfigPath()
+  const targetPath = getViteConfigPath(cwd)
 
   if (!targetPath) {
     console.error('❌ vite.config not found!')
@@ -78,7 +80,32 @@ export default async function patchViteConfig() {
     configObj.plugins.$ast.elements.push(complexPluginAst)
 
     // 7. Save the patched file
-    writeFileSync(targetPath, mod.generate().code)
+    let generatedCode = mod.generate().code
+    try {
+      // Try to format with Prettier if available in the user's workspace
+      const prettierPath = resolve(cwd, 'node_modules', 'prettier', 'index.mjs')
+      if (existsSync(prettierPath)) {
+        const prettier = await import(prettierPath)
+        const options = (await prettier.resolveConfig(targetPath)) || { semi: false, singleQuote: true }
+        options.filepath = targetPath
+        generatedCode = await prettier.format(generatedCode, options)
+      } else {
+        // Fallback for array formatting if prettier is not found
+        generatedCode = generatedCode.replace(/plugins:\s*\[(.*?)\]/s, (match, inner) => {
+          if (!inner.includes('\\n')) {
+            const split = inner.split(',').filter(s => s.trim())
+            if (split.length > 1) {
+              return 'plugins: [\\n  ' + split.map(s => s.trim()).join(',\\n  ') + '\\n]'
+            }
+          }
+          return match
+        })
+      }
+    } catch (e) {
+      // Ignore prettier errors
+    }
+
+    writeFileSync(targetPath, generatedCode)
 
     console.log('✅ vite-plugin-pwa added and configured successfully!')
   } catch (error) {
@@ -87,10 +114,8 @@ export default async function patchViteConfig() {
   }
 }
 
-const getViteConfigPath = () => {
+const getViteConfigPath = (cwd) => {
   const configFiles = ['vite.config.ts', 'vite.config.js', 'vite.config.mjs']
-  const cwd = process.env.VITE_PATCHER_CWD || process.cwd()
-
   for (const file of configFiles) {
     const fullPath = resolve(cwd, file)
     if (existsSync(fullPath)) {
