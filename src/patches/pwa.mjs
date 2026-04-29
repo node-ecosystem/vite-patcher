@@ -141,8 +141,7 @@ export default function patchViteConfig() {
                 ? '\t'.repeat(multiplier)
                 : ' '.repeat(multiplier * indentUnit.length)
 
-              // Instead of relying on `.join(eol + innerIndent)` adding the base again,
-              // we inject the full correct indent string per line:
+              // Inject the full correct indent string per line
               return innerIndent + extraIndent + line.substring(spaceCount)
             }).join(eol)
 
