@@ -19,8 +19,7 @@ export default function patchViteConfig() {
     const isTypescript = targetPath.endsWith('.ts')
 
     // Generate our VitePWA code as a literal string to insert manually
-    const pluginCode = `
-...(process.env.NODE_ENV === 'production' ? [VitePWA({
+    const pluginCode = `...(process.env.NODE_ENV === 'production' ? [VitePWA({
   registerType: 'autoUpdate',
   devOptions: {
     type: 'module'
@@ -71,7 +70,7 @@ export default function patchViteConfig() {
       if (defaultExportIndex !== -1) {
         const configBlockStart = generatedCode.indexOf('{', defaultExportIndex)
         if (configBlockStart !== -1) {
-          generatedCode = `${generatedCode.slice(0, configBlockStart + 1)}${eol}  plugins: [],"${generatedCode.slice(configBlockStart + 1)}`
+          generatedCode = `${generatedCode.slice(0, configBlockStart + 1)}${eol}  plugins: [],${generatedCode.slice(configBlockStart + 1)}`
           pluginsIndex = generatedCode.indexOf('plugins: [')
         }
       }
@@ -139,7 +138,7 @@ export default function patchViteConfig() {
               }
 
               const formattedPluginCode = pluginCode.split('\n').map((line, idx) => {
-                if (idx === 0) return line
+                if (idx === 0) return `${innerIndent}${line}`
 
                 // Re-indent pluginCode correctly replacing hardcoded spaces
                 const spaceCount = line.match(/^[ ]+/)?.[0].length || 0
@@ -151,7 +150,8 @@ export default function patchViteConfig() {
                 return `${innerIndent}${extraIndent}${line.slice(spaceCount)}`
               }).join(eol)
 
-              generatedCode = `${before.trimEnd()}${formattedPluginCode}${eol}${baseIndent}${after}`
+              generatedCode = `${before.trimEnd()}${eol}${formattedPluginCode}${eol}${baseIndent}${after}`
+              break
             }
           }
         }
