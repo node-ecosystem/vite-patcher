@@ -36,75 +36,87 @@ export default async function patchViteConfig() {
       : mod.exports.default
 
     // Ensure the plugins array exists
-    if (!configObj.plugins) {
+    // We only touch the AST for plugins if it doesn't exist, to preserve magicast array layout.
+    const hadPlugins = !!configObj.plugins
+    if (!hadPlugins) {
       configObj.plugins = []
     }
 
     const isTypescript = targetPath.endsWith('.ts')
 
-    const dummyMod = parseModule(`
-      export default [
-        ...process.env.NODE_ENV === 'production' ? [VitePWA({
-          registerType: 'autoUpdate',
-          devOptions: {
-            type: 'module'
-          },
-          manifest: {
-            name: 'My App',
-            short_name: 'MyApp',
-            theme_color: '#3F51B5',
-            background_color: '#3367D6',
-            icons: [
-              {
-                src: '/icons/logo-192.png',
-                sizes: '192x192',
-                type: 'image/png'
-              }
-            ]
+    // Generate our VitePWA code as a literal string to insert manually
+    const pluginCode = `...(process.env.NODE_ENV === 'production' ? [VitePWA({
+      registerType: 'autoUpdate',
+      devOptions: {
+        type: 'module'
+      },
+      manifest: {
+        name: 'My App',
+        short_name: 'MyApp',
+        theme_color: '#3F51B5',
+        background_color: '#3367D6',
+        icons: [
+          {
+            src: '/icons/logo-192.png',
+            sizes: '192x192',
+            type: 'image/png'
           }
-        }).map((plugin) => ({
-          ...plugin,
-          // Prevent from generating registerSW.js inside /dist/server
-          applyToEnvironment(environment${isTypescript ? ': { name: string }' : ''}) {
-            return environment.name === 'client'
-          }
-        }))] : []
-      ]
-    `)
-
-    // 5. Extract exactly the first element of the exported array
-    // This captures the entire "...process.env..." statement
-    const complexPluginAst = dummyMod.exports.default.$ast.elements[0]
-
-    // 6. Inject our complex AST node into the plugins array
-    configObj.plugins.$ast.elements.push(complexPluginAst)
-
-    // 7. Save the patched file
-    let generatedCode = mod.generate().code
-    try {
-      // Try to format with Prettier if available in the user's workspace
-      const prettierPath = resolve(cwd, 'node_modules', 'prettier', 'index.mjs')
-      if (existsSync(prettierPath)) {
-        const prettier = await import(prettierPath)
-        const options = (await prettier.resolveConfig(targetPath)) || { semi: false, singleQuote: true }
-        options.filepath = targetPath
-        generatedCode = await prettier.format(generatedCode, options)
-      } else {
-        // Fallback for array formatting if prettier is not found
-        generatedCode = generatedCode.replace(/plugins:\s*\[(.*?)\]/s, (match, inner) => {
-          if (!inner.includes('\\n')) {
-            const split = inner.split(',').filter(s => s.trim())
-            if (split.length > 1) {
-              return 'plugins: [\\n  ' + split.map(s => s.trim()).join(',\\n  ') + '\\n]'
-            }
-          }
-          return match
-        })
+        ]
       }
-    } catch (e) {
-      // Ignore prettier errors
+    }).map((plugin) => ({
+      ...plugin,
+      // Prevent from generating registerSW.js inside /dist/server
+      applyToEnvironment(environment${isTypescript ? ': { name: string }' : ''}) {
+        return environment.name === 'client'
+      }
+    }))] : [])`
+
+    // Generate the code safely with magicast (which just added the import/plugins array if missing)
+    let generatedCode = mod.generate().code
+    const eol = generatedCode.includes('\r\n') ? '\r\n' : '\n'
+
+    // Fallback: inject string inside the array instead of using AST to preserve layout
+    const pluginsIndex = generatedCode.indexOf('plugins: [')
+    if (pluginsIndex !== -1) {
+      const startIndex = generatedCode.indexOf('[', pluginsIndex) + 1
+      let depth = 1
+      let i = startIndex
+
+      while (i < generatedCode.length && depth > 0) {
+        const char = generatedCode[i]
+        if (char === "'" || char === '"' || char === '\`') {
+          const quote = char
+          i++
+          while (i < generatedCode.length && generatedCode[i] !== quote) {
+            if (generatedCode[i] === '\\\\') i++
+            i++
+          }
+        } else if (char === '[' || char === '{' || char === '(') {
+          depth++
+        } else if (char === ']' || char === '}' || char === ')') {
+          depth--
+          if (depth === 0) {
+            const before = generatedCode.substring(0, i)
+            const after = generatedCode.substring(i)
+
+            let innerCode = before.substring(startIndex)
+            const hasItems = innerCode.trim().length > 0
+
+            let insertStr = ''
+            if (hasItems && !innerCode.trimEnd().endsWith(',')) {
+              insertStr += ','
+            }
+            insertStr += eol + '    ' + pluginCode.split('\n').join(eol + '    ') + eol + '  '
+
+            generatedCode = before + insertStr + after
+            break
+          }
+        }
+        i++
+      }
     }
 
+    // 7. Save the patched file
     writeFileSync(targetPath, generatedCode)
 
     console.log('✅ vite-plugin-pwa added and configured successfully!')
