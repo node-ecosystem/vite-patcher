@@ -131,7 +131,9 @@ export default function patchViteConfig() {
 
             let formattedPluginCode = pluginCode.split('\n').map((line, idx) => {
               if (idx === 0) return line
+
               // pluginCode is currently indented with 2 spaces for each indent level.
+              // We remove the hardcoded spaces and replace them entirely with your indentUnit.
               const spaceCount = line.match(/^[ ]+/)?.[0].length || 0
               const multiplier = Math.floor(spaceCount / 2)
 
@@ -139,8 +141,10 @@ export default function patchViteConfig() {
                 ? '\t'.repeat(multiplier)
                 : ' '.repeat(multiplier * indentUnit.length)
 
-              return extraIndent + line.substring(spaceCount)
-            }).join(eol + innerIndent)
+              // Instead of relying on `.join(eol + innerIndent)` adding the base again,
+              // we inject the full correct indent string per line:
+              return innerIndent + extraIndent + line.substring(spaceCount)
+            }).join(eol)
 
             let insertStr = `${formattedPluginCode}${eol}${baseIndent}`
 
