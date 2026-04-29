@@ -4,10 +4,8 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 export default function patchViteConfig() {
-  const cwd = process.env.VITE_PATCHER_CWD || process.cwd()
-
   // Find the vite.config file
-  const targetPath = getViteConfigPath(cwd)
+  const targetPath = getViteConfigPath()
 
   if (!targetPath) {
     throw new Error('❌ vite.config not found!')
@@ -169,7 +167,8 @@ export default function patchViteConfig() {
   }
 }
 
-const getViteConfigPath = (cwd) => {
+const getViteConfigPath = () => {
+  const cwd = process.env.VITE_PATCHER_CWD || process.cwd()
   const configFiles = ['vite.config.ts', 'vite.config.js', 'vite.config.mjs']
   for (const file of configFiles) {
     const fullPath = resolve(cwd, file)
