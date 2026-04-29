@@ -46,30 +46,30 @@ export default async function patchViteConfig() {
 
     // Generate our VitePWA code as a literal string to insert manually
     const pluginCode = `...(process.env.NODE_ENV === 'production' ? [VitePWA({
-      registerType: 'autoUpdate',
-      devOptions: {
-        type: 'module'
-      },
-      manifest: {
-        name: 'My App',
-        short_name: 'MyApp',
-        theme_color: '#3F51B5',
-        background_color: '#3367D6',
-        icons: [
-          {
-            src: '/icons/logo-192.png',
-            sizes: '192x192',
-            type: 'image/png'
-          }
-        ]
+  registerType: 'autoUpdate',
+  devOptions: {
+    type: 'module'
+  },
+  manifest: {
+    name: 'My App',
+    short_name: 'MyApp',
+    theme_color: '#3F51B5',
+    background_color: '#3367D6',
+    icons: [
+      {
+        src: '/icons/logo-192.png',
+        sizes: '192x192',
+        type: 'image/png'
       }
-    }).map((plugin) => ({
-      ...plugin,
-      // Prevent from generating registerSW.js inside /dist/server
-      applyToEnvironment(environment${isTypescript ? ': { name: string }' : ''}) {
-        return environment.name === 'client'
-      }
-    }))] : [])`
+    ]
+  }
+}).map((plugin) => ({
+  ...plugin,
+  // Prevent from generating registerSW.js inside /dist/server
+  applyToEnvironment(environment${isTypescript ? ': { name: string }' : ''}) {
+    return environment.name === 'client'
+  }
+}))] : [])`
 
     // Generate the code safely with magicast (which just added the import/plugins array if missing)
     let generatedCode = mod.generate().code
@@ -78,6 +78,20 @@ export default async function patchViteConfig() {
     // Inject string inside the array instead of using AST to preserve layout
     const pluginsIndex = generatedCode.indexOf('plugins: [')
     if (pluginsIndex !== -1) {
+      const pluginsLineStart = generatedCode.lastIndexOf('\n', pluginsIndex)
+      let baseIndent = ''
+      if (pluginsLineStart !== -1) {
+        const linePrefix = generatedCode.substring(pluginsLineStart + 1, pluginsIndex)
+        const indentMatch = linePrefix.match(/^[ \t]*/)
+        if (indentMatch) {
+          baseIndent = indentMatch[0]
+        }
+      }
+
+      const isTab = generatedCode.includes('\t')
+      const indentUnit = isTab ? '\t' : '  '
+      const innerIndent = baseIndent + indentUnit
+
       const startIndex = generatedCode.indexOf('[', pluginsIndex) + 1
       let depth = 1
       let i = startIndex
@@ -106,7 +120,15 @@ export default async function patchViteConfig() {
               before = `${before.trimEnd()},`
             }
 
-            let insertStr = `${eol}    ${pluginCode.split('\n').join(eol + '    ')}${eol}  `
+            let formattedPluginCode = pluginCode.split('\n').map((line, idx) => {
+              if (idx === 0) return line
+              const spacesMatch = line.match(/^[ ]+/)
+              const spaceCount = spacesMatch ? spacesMatch[0].length : 0
+              const extraIndent = indentUnit.repeat(Math.floor(spaceCount / 2))
+              return extraIndent + line.substring(spaceCount)
+            }).join(eol + innerIndent)
+
+            let insertStr = `${eol}${innerIndent}${formattedPluginCode}${eol}${baseIndent}`
 
             generatedCode = before + insertStr + after
             break
