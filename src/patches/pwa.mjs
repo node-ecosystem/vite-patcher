@@ -19,17 +19,17 @@ export default async function patchViteConfig() {
   console.log(`⏳ Patching file ${targetPath}…`)
 
   try {
-    // 2. Load the abstract syntax tree (AST) of the file
+    // Load the abstract syntax tree (AST) of the file
     const mod = await loadFile(targetPath)
 
-    // 3. Add the import manually
+    // Add the import manually
     mod.imports.$add({
       from: 'vite-plugin-pwa',
       name: 'VitePWA',
       imported: 'VitePWA'
     })
 
-    // 4. Find the configuration object in the original file
+    // Find the configuration object in the original file
     // Supports "export default defineConfig({...})" or "export default {...}"
     const configObj = (mod.exports.default.$type === 'function-call' || mod.exports.default.$type === 'call')
       ? mod.exports.default.$args[0]
@@ -75,7 +75,7 @@ export default async function patchViteConfig() {
     let generatedCode = mod.generate().code
     const eol = generatedCode.includes('\r\n') ? '\r\n' : '\n'
 
-    // Fallback: inject string inside the array instead of using AST to preserve layout
+    // Inject string inside the array instead of using AST to preserve layout
     const pluginsIndex = generatedCode.indexOf('plugins: [')
     if (pluginsIndex !== -1) {
       const startIndex = generatedCode.indexOf('[', pluginsIndex) + 1
@@ -116,7 +116,7 @@ export default async function patchViteConfig() {
       }
     }
 
-    // 7. Save the patched file
+    // Save the patched file
     writeFileSync(targetPath, generatedCode)
 
     console.log('✅ vite-plugin-pwa added and configured successfully!')
