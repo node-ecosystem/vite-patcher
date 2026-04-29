@@ -10,8 +10,7 @@ export default async function patchViteConfig() {
   const targetPath = getViteConfigPath(cwd)
 
   if (!targetPath) {
-    console.error('❌ vite.config not found!')
-    process.exit(1)
+    throw new Error('❌ vite.config not found!')
   }
 
   console.log(`⏳ Patching file ${targetPath}…`)
@@ -158,8 +157,8 @@ export default async function patchViteConfig() {
 
     console.log('✅ vite-plugin-pwa added and configured successfully!')
   } catch (error) {
-    console.error('❌ Error while patching the file:', error)
-    process.exit(1)
+    console.error(`❌ Error while patching the file: ${error}`)
+    throw error
   }
 }
 
