@@ -20,6 +20,7 @@
   "scripts": {
     "build": "tsdown",
     "test": "yarn node --test test/*.test.js",
+    "pwa": "yarn node ./src/bin/vite-patcher.mjs pwa",
     "od": "yarn outdated"
   },
   "dependencies": {
