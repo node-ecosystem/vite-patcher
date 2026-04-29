@@ -68,7 +68,7 @@ export default async function patchViteConfig() {
           applyToEnvironment(environment${isTypescript ? ': { name: string }' : ''}) {
             return environment.name === 'client'
           }
-        }))] : null
+        }))] : []
       ]
     `)
 
