@@ -16,9 +16,7 @@
   "bugs": {
     "url": "https://github.com/node-ecosystem/vite-patcher/issues"
   },
-  "bin": {
-    "vite-pwa": "./dist/bin/vite-pwa.mjs"
-  },
+  "bin": "./dist/bin/vite-patcher.mjs",
   "scripts": {
     "build": "tsdown",
     "test": "yarn node --test test/*.test.js",
