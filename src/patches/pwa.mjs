@@ -6,7 +6,7 @@ import { resolve } from 'node:path'
 export default function patchViteConfig() {
   const cwd = process.env.VITE_PATCHER_CWD || process.cwd()
 
-  // 1. Find the vite.config file
+  // Find the vite.config file
   const targetPath = getViteConfigPath(cwd)
 
   if (!targetPath) {
@@ -46,10 +46,10 @@ export default function patchViteConfig() {
   }
 }))] : [])`
 
+    let generatedCode = readFileSync(targetPath, 'utf8')
     // IMPORTANT FIX: Avoid letting magicast re-serialize the entire AST if we can help it, 
     // because recast converts 1 tab into 4 tabs by default, destroying user files.
     // Instead we will work directly on the original string.
-    let generatedCode = readFileSync(targetPath, 'utf8')
     const eol = generatedCode.includes('\r\n') ? '\r\n' : '\n'
 
     // Add import statement
