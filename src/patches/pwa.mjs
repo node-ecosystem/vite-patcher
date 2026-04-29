@@ -47,9 +47,6 @@ export default function patchViteConfig() {
 }))] : [])`
 
     let generatedCode = readFileSync(targetPath, 'utf8')
-    // IMPORTANT FIX: Avoid letting magicast re-serialize the entire AST if we can help it, 
-    // because recast converts 1 tab into 4 tabs by default, destroying user files.
-    // Instead we will work directly on the original string.
     const eol = generatedCode.includes('\r\n') ? '\r\n' : '\n'
 
     // Add import statement
@@ -60,7 +57,8 @@ export default function patchViteConfig() {
       } else {
         const importEndIndex = generatedCode.indexOf(eol, lastImportIndex)
         if (importEndIndex !== -1) {
-          generatedCode = generatedCode.slice(0, Math.max(0, importEndIndex + eol.length)) + `import { VitePWA } from 'vite-plugin-pwa'${eol}` + generatedCode.slice(Math.max(0, importEndIndex + eol.length))
+          const pos = importEndIndex + eol.length
+          generatedCode = `${generatedCode.slice(0, pos)}import { VitePWA } from 'vite-plugin-pwa'${eol}${generatedCode.slice(pos)}`
         }
       }
     }
@@ -73,7 +71,7 @@ export default function patchViteConfig() {
       if (defaultExportIndex !== -1) {
         const configBlockStart = generatedCode.indexOf('{', defaultExportIndex)
         if (configBlockStart !== -1) {
-          generatedCode = generatedCode.slice(0, Math.max(0, configBlockStart + 1)) + `${eol}  plugins: [],` + generatedCode.slice(Math.max(0, configBlockStart + 1))
+          generatedCode = `${generatedCode.slice(0, configBlockStart + 1)}${eol}  plugins: [],"${generatedCode.slice(configBlockStart + 1)}`
           pluginsIndex = generatedCode.indexOf('plugins: [')
         }
       }
@@ -129,10 +127,10 @@ export default function patchViteConfig() {
           case ')': {
             depth--
             if (depth === 0) {
-              let before = generatedCode.slice(0, Math.max(0, i))
-              const after = generatedCode.slice(Math.max(0, i))
+              let before = generatedCode.slice(0, i)
+              const after = generatedCode.slice(i)
 
-              let innerCode = before.slice(Math.max(0, startIndex))
+              const innerCode = before.slice(startIndex)
               const hasItems = innerCode.trim().length > 0
 
               if (hasItems && !innerCode.trimEnd().endsWith(',')) {
@@ -140,26 +138,20 @@ export default function patchViteConfig() {
                 before = before.replace(/(\S)(\s*)$/, '$1,$2')
               }
 
-              let formattedPluginCode = pluginCode.split('\n').map((line, idx) => {
+              const formattedPluginCode = pluginCode.split('\n').map((line, idx) => {
                 if (idx === 0) return line
 
-                // pluginCode is currently indented with 2 spaces for each indent level.
-                // We remove the hardcoded spaces and replace them entirely with your indentUnit.
+                // Re-indent pluginCode correctly replacing hardcoded spaces
                 const spaceCount = line.match(/^[ ]+/)?.[0].length || 0
                 const multiplier = Math.floor(spaceCount / 2)
-
                 const extraIndent = indentUnit === '\t'
                   ? '\t'.repeat(multiplier)
                   : ' '.repeat(multiplier * indentUnit.length)
 
-                // Inject the full correct indent string per line
-                return innerIndent + extraIndent + line.slice(Math.max(0, spaceCount))
+                return `${innerIndent}${extraIndent}${line.slice(spaceCount)}`
               }).join(eol)
 
-              let insertStr = `${formattedPluginCode}${eol}${baseIndent}`
-
-              generatedCode = before.trimEnd() + insertStr + after
-              break
+              generatedCode = `${before.trimEnd()}${formattedPluginCode}${eol}${baseIndent}${after}`
             }
           }
         }
