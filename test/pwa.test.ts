@@ -12,26 +12,27 @@ const execAsync = promisify(exec)
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const PWA_SCRIPT = join(__dirname, '../src/bin/vite-patcher.ts')
 
+const runScriptInDir = async (cwd: string) => {
+  return execAsync(`node "${PWA_SCRIPT}" pwa`, {
+    env: { ...process.env, VITE_PATCHER_CWD: cwd }
+  })
+}
+
 describe('pwa.ts patch script', () => {
-  const runScriptInDir = async (cwd: string) => {
-    return execAsync(`node "${PWA_SCRIPT}" pwa`, {
-      env: { ...process.env, VITE_PATCHER_CWD: cwd }
-    })
-  }
 
   const testConfig = async (fileName: string, initialContent: string, expectedContains: string[]) => {
     const tempDir = await mkdtemp(join(tmpdir(), 'vite-patcher-test-'))
     try {
       const configPath = join(tempDir, fileName)
-      await writeFile(configPath, initialContent, 'utf-8')
+      await writeFile(configPath, initialContent, 'utf8')
 
       await runScriptInDir(tempDir)
 
-      const updatedContent = await readFile(configPath, 'utf-8')
+      const updatedContent = await readFile(configPath, 'utf8')
 
-      expectedContains.forEach((str) => {
+      for (const str of expectedContains) {
         assert.ok(updatedContent.includes(str), `Expected ${fileName} to contain "${str}"`)
-      })
+      }
 
     } finally {
       await rm(tempDir, { recursive: true, force: true })

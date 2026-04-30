@@ -4,7 +4,7 @@ import patches from '../patches/index.ts'
 
 const command = process.argv[2]
 
-const patchFunction = patches[command]
+const patchFunction = patches[command as keyof typeof patches]
 
 if (patchFunction) {
   try {

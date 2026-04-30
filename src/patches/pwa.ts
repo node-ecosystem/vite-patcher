@@ -203,7 +203,17 @@ const patchVikeHeadPage = async (cwd: string, viteConfigPath: string) => {
 
   // Check if +Head file exists in pages directory
   let headPath = getPath(join(projectRoot, 'pages'), '+Head', ['tsx', 'jsx'])
-  if (!headPath) {
+  if (headPath) {
+    // Add manifest link in +Head file if it doesn't exist
+    let headContent = readFileSync(headPath, 'utf8')
+    if (headContent.includes('manifest.webmanifest')) {
+      console.log(`ℹ️ ${headPath} already includes a manifest link. ${SKIP_MESSAGE}`)
+    } else {
+      headContent = headContent.replace(/(\s*)(<\/>)/, `$1  <link rel="manifest" href="/manifest.webmanifest" />$1$2`)
+      writeFileSync(headPath, headContent, 'utf8')
+      console.log(`✅ Updated ${headPath} to include manifest link`)
+    }
+  } else {
     const pagesDir = join(projectRoot, 'pages')
     createFolder(pagesDir)
     headPath = join(pagesDir, `+Head.${isTypescript ? 'tsx' : 'jsx'}`)
@@ -217,16 +227,6 @@ const patchVikeHeadPage = async (cwd: string, viteConfigPath: string) => {
 `
     writeFileSync(headPath, defaultHead, 'utf8')
     console.log(`✅ Created ${headPath} with manifest link`)
-  } else {
-    // Add manifest link in +Head file if it doesn't exist
-    let headContent = readFileSync(headPath, 'utf8')
-    if (headContent.includes('manifest.webmanifest')) {
-      console.log(`ℹ️ ${headPath} already includes a manifest link. ${SKIP_MESSAGE}`)
-    } else {
-      headContent = headContent.replace(/(\s*)(<\/>)/, `$1  <link rel="manifest" href="/manifest.webmanifest" />$1$2`)
-      writeFileSync(headPath, headContent, 'utf8')
-      console.log(`✅ Updated ${headPath} to include manifest link`)
-    }
   }
 
   // Create manifest.webmanifest in public directory if it doesn't exist
