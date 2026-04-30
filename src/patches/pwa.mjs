@@ -5,6 +5,8 @@ import { join, resolve } from 'node:path'
 
 import { createFolder, getPath } from '../utils.mjs'
 
+let isTypescript
+
 export default async function patchViteConfig() {
   const cwd = process.env.VITE_PATCHER_CWD || process.cwd()
   // Find the vite.config file
@@ -18,8 +20,7 @@ export default async function patchViteConfig() {
 
   try {
     let generatedCode = readFileSync(targetPath, 'utf8')
-    // TODO move at the end
-    await patchVikeHeadPage(cwd, targetPath)
+
     const eol = generatedCode.includes('\r\n') ? '\r\n' : '\n'
 
     // Add import statement
@@ -75,7 +76,7 @@ export default async function patchViteConfig() {
       let depth = 1
       let i = startIndex
 
-      const isTypescript = targetPath.endsWith('.ts')
+      isTypescript = targetPath.endsWith('.ts')
 
       // Generate our VitePWA code as a literal string to insert manually
       const pluginCode = `...(process.env.NODE_ENV === 'production' ? [VitePWA({
@@ -165,6 +166,8 @@ export default async function patchViteConfig() {
     // Save the patched file
     writeFileSync(targetPath, generatedCode)
 
+    await patchVikeHeadPage(cwd, targetPath)
+
     console.log('✅ vite-plugin-pwa added and configured successfully!')
   } catch (error) {
     console.error(`❌ Error while patching the file: ${error}`)
@@ -198,24 +201,38 @@ const patchVikeHeadPage = async (cwd, viteConfigPath) => {
   const projectRoot = viteConfig.root ? resolve(cwd, viteConfig.root) : cwd
 
   // Check if +Head file exists in pages directory
-  const headPath = getPath(join(projectRoot, 'pages'), '+Head', ['tsx', 'jsx'])
+  let headPath = getPath(join(projectRoot, 'pages'), '+Head', ['tsx', 'jsx'])
   if (!headPath) {
-    console.warn(`⚠️ Could not find "+Head" file in "pages" directory. ${SKIP_MESSAGE} Ensure your Vike project has a +Head file and add <link rel="manifest" href="/manifest.webmanifest"> inside.`)
-    return
+    const pagesDir = join(projectRoot, 'pages')
+    createFolder(pagesDir)
+    headPath = join(pagesDir, `+Head.${isTypescript ? 'tsx' : 'jsx'}`)
+    const defaultHead = `export function Head() {
+  return (
+    <>
+      <link rel="manifest" href="/manifest.webmanifest" />
+    </>
+  )
+}
+`
+    writeFileSync(headPath, defaultHead, 'utf8')
+    console.log(`✅ Created ${headPath} with manifest link.`)
+  } else {
+    // Add manifest link in +Head file if it doesn't exist
+    let headContent = readFileSync(headPath, 'utf8')
+    if (headContent.includes('manifest.webmanifest')) {
+      console.log(`ℹ️ ${headPath} already includes a manifest link. ${SKIP_MESSAGE}`)
+    } else {
+      headContent = headContent.replace(/(\s*)(<\/>)/, `$1  <link rel="manifest" href="/manifest.webmanifest" />$1$2`)
+      writeFileSync(headPath, headContent, 'utf8')
+      console.log(`✅ Updated ${headPath} to include manifest link.`)
+    }
   }
-  // Add manifest link in +Head file if it doesn't exist
-  let headContent = readFileSync(headPath, 'utf8')
-  if (headContent.includes('manifest.webmanifest')) {
-    console.log(`ℹ️ ${headPath} already includes a manifest link. ${SKIP_MESSAGE}`)
-    return
-  }
-  headContent = headContent.replace(/<head>(\s*)/, `<head>$1  <link rel="manifest" href="/manifest.webmanifest" />${'\n'}`)
-  writeFileSync(headPath, headContent, 'utf8')
 
   // Create manifest.webmanifest in public directory if it doesn't exist
   const publicDir = join(projectRoot, 'public')
   createFolder(publicDir)
-  writeFileSync(join(publicDir, 'manifest.webmanifest'), '', 'utf8')
-
-  console.log(`✅ Updated ${headPath} to include manifest link.`)
+  const manifestPath = join(publicDir, 'manifest.webmanifest')
+  if (!existsSync(manifestPath)) {
+    writeFileSync(manifestPath, '', 'utf8')
+  }
 }
