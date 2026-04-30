@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync } from 'node:fs'
 import { resolve } from 'node:path'
 
-export const getPath = (basepath, filename, extensions = ['ts', 'js', 'mjs']) => {
+export const getPath = (basepath: string, filename: string, extensions = ['ts', 'js', 'mjs']) => {
   const configFiles = extensions.map((ext) => `${filename}.${ext}`)
   for (const file of configFiles) {
     const fullPath = resolve(basepath, file)
@@ -11,7 +11,7 @@ export const getPath = (basepath, filename, extensions = ['ts', 'js', 'mjs']) =>
   }
 }
 
-export const createFolder = (path) => {
+export const createFolder = (path: string) => {
   if (!existsSync(path)) {
     mkdirSync(path, { recursive: true })
   }

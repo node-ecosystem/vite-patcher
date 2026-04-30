@@ -194,7 +194,7 @@ const patchVikeHeadPage = async (cwd: string, viteConfigPath: string) => {
   const { default: viteConfig }: { default: UserConfig } = await import(`file:${viteConfigPath}`)
 
   // Check vike in vite.config dependencies
-  if (!viteConfig.plugins?.find((p) => '_vikeVitePluginOptions' in p)) {
+  if (!viteConfig.plugins?.find((p: any) => '_vikeVitePluginOptions' in p)) {
     console.warn(`⚠️ Vike not detected in package.json or vite.config dependencies. ${SKIP_MESSAGE}`)
     return
   }
