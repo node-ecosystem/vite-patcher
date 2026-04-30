@@ -31,10 +31,17 @@
     "tsdown": "^0.21.10",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.59.1",
+    "vike": "^0.4.258",
     "vite": "^8.0.10"
   },
   "peerDependencies": {
+    "vike": "*",
     "vite": "*"
+  },
+  "peerDependenciesMeta": {
+    "vike": {
+      "optional": true
+    }
   },
   "files": [
     "dist"

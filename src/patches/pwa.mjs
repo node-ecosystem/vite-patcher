@@ -1,11 +1,14 @@
 #!/usr/bin/env node
 
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
-import { resolve } from 'node:path'
+import { join, resolve } from 'node:path'
 
-export default function patchViteConfig() {
+import { createFolder, getPath } from '../utils.mjs'
+
+export default async function patchViteConfig() {
+  const cwd = process.env.VITE_PATCHER_CWD || process.cwd()
   // Find the vite.config file
-  const targetPath = getViteConfigPath()
+  const targetPath = getPath(cwd, 'vite.config')
 
   if (!targetPath) {
     throw new Error('❌ vite.config not found!')
@@ -14,36 +17,9 @@ export default function patchViteConfig() {
   console.log(`⏳ Patching file ${targetPath}…`)
 
   try {
-    const isTypescript = targetPath.endsWith('.ts')
-
-    // Generate our VitePWA code as a literal string to insert manually
-    const pluginCode = `...(process.env.NODE_ENV === 'production' ? [VitePWA({
-  registerType: 'autoUpdate',
-  devOptions: {
-    type: 'module'
-  },
-  manifest: {
-    name: 'My App',
-    short_name: 'MyApp',
-    theme_color: '#3F51B5',
-    background_color: '#3367D6',
-    icons: [
-      {
-        src: '/icons/logo-192.png',
-        sizes: '192x192',
-        type: 'image/png'
-      }
-    ]
-  }
-}).map((plugin) => ({
-  ...plugin,
-  // Prevent from generating registerSW.js inside /dist/server
-  applyToEnvironment(environment${isTypescript ? ': { name: string }' : ''}) {
-    return environment.name === 'client'
-  }
-}))] : [])`
-
     let generatedCode = readFileSync(targetPath, 'utf8')
+    // TODO move at the end
+    await patchVikeHeadPage(cwd, targetPath)
     const eol = generatedCode.includes('\r\n') ? '\r\n' : '\n'
 
     // Add import statement
@@ -98,6 +74,35 @@ export default function patchViteConfig() {
       const startIndex = generatedCode.indexOf('[', pluginsIndex) + 1
       let depth = 1
       let i = startIndex
+
+      const isTypescript = targetPath.endsWith('.ts')
+
+      // Generate our VitePWA code as a literal string to insert manually
+      const pluginCode = `...(process.env.NODE_ENV === 'production' ? [VitePWA({
+  registerType: 'autoUpdate',
+  devOptions: {
+    type: 'module'
+  },
+  manifest: {
+    name: 'My App',
+    short_name: 'MyApp',
+    theme_color: '#3F51B5',
+    background_color: '#3367D6',
+    icons: [
+      {
+        src: '/icons/logo-192.png',
+        sizes: '192x192',
+        type: 'image/png'
+      }
+    ]
+  }
+}).map((plugin) => ({
+  ...plugin,
+  // Prevent from generating registerSW.js inside /dist/server
+  applyToEnvironment(environment${isTypescript ? ': { name: string }' : ''}) {
+    return environment.name === 'client'
+  }
+}))] : [])`
 
       while (i < generatedCode.length && depth > 0) {
         const char = generatedCode[i]
@@ -167,13 +172,50 @@ export default function patchViteConfig() {
   }
 }
 
-const getViteConfigPath = () => {
-  const cwd = process.env.VITE_PATCHER_CWD || process.cwd()
-  const configFiles = ['vite.config.ts', 'vite.config.js', 'vite.config.mjs']
-  for (const file of configFiles) {
-    const fullPath = resolve(cwd, file)
-    if (existsSync(fullPath)) {
-      return fullPath
-    }
+const patchVikeHeadPage = async (cwd, viteConfigPath) => {
+  const SKIP_MESSAGE = 'Skipping "manifest" integration.'
+  // Check if package.json exists
+  const pkgPath = resolve(cwd, 'package.json')
+  if (!existsSync(pkgPath)) {
+    console.warn(`⚠️ Could not find package.json in ${cwd}. ${SKIP_MESSAGE}`)
+    return
   }
+  // Check vike in package.json dependencies
+  const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'))
+  if (!((pkg.dependencies && pkg.dependencies.vike) || (pkg.devDependencies && pkg.devDependencies.vike))) {
+    console.warn(`⚠️ Vike not detected in package.json dependencies. ${SKIP_MESSAGE}`)
+    return
+  }
+
+  const viteConfig = (await import(`file:${viteConfigPath}`)).default
+
+  // Check vike in vite.config dependencies
+  if (!viteConfig.plugins?.find((p) => '_vikeVitePluginOptions' in p)) {
+    console.warn(`⚠️ Vike not detected in package.json or vite.config dependencies. ${SKIP_MESSAGE}`)
+    return
+  }
+
+  const projectRoot = viteConfig.root ? resolve(cwd, viteConfig.root) : cwd
+
+  // Check if +Head file exists in pages directory
+  const headPath = getPath(join(projectRoot, 'pages'), '+Head', ['tsx', 'jsx'])
+  if (!headPath) {
+    console.warn(`⚠️ Could not find "+Head" file in "pages" directory. ${SKIP_MESSAGE} Ensure your Vike project has a +Head file and add <link rel="manifest" href="/manifest.webmanifest"> inside.`)
+    return
+  }
+  // Add manifest link in +Head file if it doesn't exist
+  let headContent = readFileSync(headPath, 'utf8')
+  if (headContent.includes('manifest.webmanifest')) {
+    console.log(`ℹ️ ${headPath} already includes a manifest link. ${SKIP_MESSAGE}`)
+    return
+  }
+  headContent = headContent.replace(/<head>(\s*)/, `<head>$1  <link rel="manifest" href="/manifest.webmanifest" />${'\n'}`)
+  writeFileSync(headPath, headContent, 'utf8')
+
+  // Create manifest.webmanifest in public directory if it doesn't exist
+  const publicDir = join(projectRoot, 'public')
+  createFolder(publicDir)
+  writeFileSync(join(publicDir, 'manifest.webmanifest'), '', 'utf8')
+
+  console.log(`✅ Updated ${headPath} to include manifest link.`)
 }
