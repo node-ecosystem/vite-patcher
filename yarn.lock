@@ -903,7 +903,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/node@npm:*":
+"@types/node@npm:*, @types/node@npm:^25.6.0":
   version: 25.6.0
   resolution: "@types/node@npm:25.6.0"
   dependencies:
@@ -3501,6 +3501,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "vite-patcher@workspace:."
   dependencies:
+    "@types/node": "npm:^25.6.0"
     "@yarnpkg/sdks": "npm:^3.2.3"
     eslint: "npm:^10.2.1"
     eslint-plugin-unicorn: "npm:^64.0.0"

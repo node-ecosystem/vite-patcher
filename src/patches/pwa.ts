@@ -2,10 +2,11 @@
 
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
+import type { UserConfig } from 'vite'
 
-import { createFolder, getPath } from '../utils.mjs'
+import { createFolder, getPath } from '../utils.ts'
 
-let isTypescript
+let isTypescript: boolean
 
 export default async function patchViteConfig() {
   const cwd = process.env.VITE_PATCHER_CWD || process.cwd()
@@ -175,7 +176,7 @@ export default async function patchViteConfig() {
   }
 }
 
-const patchVikeHeadPage = async (cwd, viteConfigPath) => {
+const patchVikeHeadPage = async (cwd: string, viteConfigPath: string) => {
   const SKIP_MESSAGE = 'Skipping "manifest" integration.'
   // Check if package.json exists
   const pkgPath = resolve(cwd, 'package.json')
@@ -190,7 +191,7 @@ const patchVikeHeadPage = async (cwd, viteConfigPath) => {
     return
   }
 
-  const viteConfig = (await import(`file:${viteConfigPath}`)).default
+  const { default: viteConfig }: { default: UserConfig } = await import(`file:${viteConfigPath}`)
 
   // Check vike in vite.config dependencies
   if (!viteConfig.plugins?.find((p) => '_vikeVitePluginOptions' in p)) {

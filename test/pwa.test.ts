@@ -10,22 +10,22 @@ import { dirname } from 'node:path'
 
 const execAsync = promisify(exec)
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const PWA_SCRIPT = join(__dirname, '../src/bin/vite-patcher.mjs')
+const PWA_SCRIPT = join(__dirname, '../src/bin/vite-patcher.ts')
 
-describe('pwa.mjs patch script', () => {
-  const runScriptInDir = async (cwd) => {
+describe('pwa.ts patch script', () => {
+  const runScriptInDir = async (cwd: string) => {
     return execAsync(`node "${PWA_SCRIPT}" pwa`, {
       env: { ...process.env, VITE_PATCHER_CWD: cwd }
     })
   }
 
-  const testConfig = async (fileName, initialContent, expectedContains) => {
+  const testConfig = async (fileName: string, initialContent: string, expectedContains: string[]) => {
     const tempDir = await mkdtemp(join(tmpdir(), 'vite-patcher-test-'))
     try {
       const configPath = join(tempDir, fileName)
       await writeFile(configPath, initialContent, 'utf-8')
 
-      const { stdout, stderr } = await runScriptInDir(tempDir)
+      await runScriptInDir(tempDir)
 
       const updatedContent = await readFile(configPath, 'utf-8')
 

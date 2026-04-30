@@ -19,12 +19,13 @@
   "bin": "./dist/bin/vite-patcher.mjs",
   "scripts": {
     "build": "tsdown",
-    "test": "yarn node --test test/*.test.js",
-    "pwa": "yarn node ./src/bin/vite-patcher.mjs pwa",
-    "lint": "eslint src/**/*.mjs",
+    "test": "yarn node --test test/*.test.ts",
+    "pwa": "yarn node ./src/bin/vite-patcher.ts pwa",
+    "lint": "eslint src/**/*.ts",
     "od": "yarn outdated"
   },
   "devDependencies": {
+    "@types/node": "^25.6.0",
     "@yarnpkg/sdks": "^3.2.3",
     "eslint": "^10.2.1",
     "eslint-plugin-unicorn": "^64.0.0",

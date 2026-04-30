@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import patches from '../patches/index.mjs'
+import patches from '../patches/index.ts'
 
 const command = process.argv[2]
 
