@@ -13,7 +13,7 @@ export default async function patchViteConfig() {
   const targetPath = getPath(cwd, 'vite.config')
 
   if (!targetPath) {
-    throw new Error('❌ vite.config not found!')
+    throw new Error('❌ vite.config not found')
   }
 
   console.log(`⏳ Patching file ${targetPath}…`)
@@ -166,11 +166,11 @@ export default async function patchViteConfig() {
     // Save the patched file
     writeFileSync(targetPath, generatedCode)
 
-    await patchVikeHeadPage(cwd, targetPath)
+    console.log('✅ vite-plugin-pwa added to vite.config')
 
-    console.log('✅ vite-plugin-pwa added and configured successfully!')
+    await patchVikeHeadPage(cwd, targetPath)
   } catch (error) {
-    console.error(`❌ Error while patching the file: ${error}`)
+    console.error('❌ Error while patching the file:', error)
     throw error
   }
 }
@@ -215,7 +215,7 @@ const patchVikeHeadPage = async (cwd, viteConfigPath) => {
 }
 `
     writeFileSync(headPath, defaultHead, 'utf8')
-    console.log(`✅ Created ${headPath} with manifest link.`)
+    console.log(`✅ Created ${headPath} with manifest link`)
   } else {
     // Add manifest link in +Head file if it doesn't exist
     let headContent = readFileSync(headPath, 'utf8')
@@ -224,7 +224,7 @@ const patchVikeHeadPage = async (cwd, viteConfigPath) => {
     } else {
       headContent = headContent.replace(/(\s*)(<\/>)/, `$1  <link rel="manifest" href="/manifest.webmanifest" />$1$2`)
       writeFileSync(headPath, headContent, 'utf8')
-      console.log(`✅ Updated ${headPath} to include manifest link.`)
+      console.log(`✅ Updated ${headPath} to include manifest link`)
     }
   }
 
@@ -235,4 +235,5 @@ const patchVikeHeadPage = async (cwd, viteConfigPath) => {
   if (!existsSync(manifestPath)) {
     writeFileSync(manifestPath, '', 'utf8')
   }
+  console.log(`✅ Created ${manifestPath}`)
 }
