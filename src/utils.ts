@@ -35,8 +35,10 @@ export const getPluginsData = (rootAST: SgNode<TypesMap, Kinds<TypesMap>>) => {
   if (!obj) return { obj: null, arr: null }
 
   // Check top-level properties directly to avoid matching nested object properties
-  let pluginsPair = null
-  for (const c of obj.children()) {
+  let pluginsPair: SgNode<TypesMap, Kinds<TypesMap>> | null = null
+  const children = obj.children()
+  for (let i = children.length - 1; i >= 0; i--) {
+    const c = children[i]
     const kind = c.kind()
     if (kind === 'shorthand_property_identifier' && c.text() === 'plugins') {
       return { obj, arr: null, error: true }
@@ -45,6 +47,7 @@ export const getPluginsData = (rootAST: SgNode<TypesMap, Kinds<TypesMap>>) => {
       const keyText = c.children()[0]?.text()
       if (keyText === 'plugins' || keyText === "'plugins'" || keyText === '"plugins"') {
         pluginsPair = c
+        break
       }
     }
   }
@@ -80,11 +83,18 @@ export const getProjectRoot = (rootAST: SgNode<TypesMap, Kinds<TypesMap>>, cwd: 
   const { obj } = getPluginsData(rootAST)
   if (!obj) return cwd
 
-  const rootPair = obj.children().find(c => {
-    if (c.kind() !== 'pair') return false
-    const keyText = c.children()[0]?.text()
-    return keyText === 'root' || keyText === "'root'" || keyText === '"root"'
-  })
+  let rootPair: SgNode<TypesMap, Kinds<TypesMap>> | null = null
+  const children = obj.children()
+  for (let i = children.length - 1; i >= 0; i--) {
+    const c = children[i]
+    if (c.kind() === 'pair') {
+      const keyText = c.children()[0]?.text()
+      if (keyText === 'root' || keyText === "'root'" || keyText === '"root"') {
+        rootPair = c
+        break
+      }
+    }
+  }
 
   if (!rootPair) return cwd
 
@@ -101,4 +111,23 @@ export const getProjectRoot = (rootAST: SgNode<TypesMap, Kinds<TypesMap>>, cwd: 
   if (match) return resolve(cwd, match[2])
 
   return cwd
+}
+
+export const getTrivia = (code: string) => {
+  let singleQuotesCount = 0
+  let doubleQuotesCount = 0
+  for (const char of code) {
+    if (char === "'") singleQuotesCount++
+    else if (char === '"') doubleQuotesCount++
+  }
+
+  const quote = singleQuotesCount >= doubleQuotesCount ? "'" : '"'
+  const indent = code.includes('\t') ? '\t' : (code.match(/\r?\n( +)\S/)?.[1] || '  ')
+  const eol = code.includes('\r\n') ? '\r\n' : '\n'
+
+  return {
+    quote,
+    indent,
+    eol
+  }
 }

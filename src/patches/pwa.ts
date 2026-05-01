@@ -4,7 +4,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { parse, Lang } from '@ast-grep/napi'
 
-import { createFolder, getPath, getPluginsData, getProjectRoot, getViteConfigPath, isVikePluginUsed } from '../utils.ts'
+import { createFolder, getPath, getPluginsData, getProjectRoot, getTrivia, getViteConfigPath, isVikePluginUsed } from '../utils.ts'
 
 let isTypescript: boolean
 let lang: Lang
@@ -20,12 +20,10 @@ export default async function pwa() {
 
   const viteConfigCode = readFileSync(viteConfigPath, 'utf8')
 
-  quote = viteConfigCode.split("'").length >= viteConfigCode.split('"').length ? "'" : '"'
-  indent = viteConfigCode.includes('\t') ? '\t' : (viteConfigCode.match(/\r?\n( +)\S/)?.[1] || '  ')
-  eol = viteConfigCode.includes('\r\n') ? '\r\n' : '\n'
+    ; ({ quote, indent, eol } = getTrivia(viteConfigCode))
 
-  await patchViteConfig(viteConfigPath, viteConfigCode)
-  await patchVikeHeadManifest(cwd, viteConfigPath)
+  const viteConfigCodeUpdated = await patchViteConfig(viteConfigPath, viteConfigCode)
+  await patchVikeHeadManifest(cwd, viteConfigCodeUpdated)
 }
 
 const patchViteConfig = async (viteConfigPath: string, viteConfigCode: string) => {
@@ -34,17 +32,20 @@ const patchViteConfig = async (viteConfigPath: string, viteConfigCode: string) =
   try {
     let rootAST = parse(lang, viteConfigCode).root()
 
-    const isAlreadyPatched = rootAST
-      .findAll({ rule: { kind: 'call_expression' } })
-      .some(call => call.find({ rule: { kind: 'identifier' } })?.text() === 'VitePWA')
+    // eslint-disable-next-line unicorn/prefer-array-some
+    const isAlreadyPatched = !!rootAST.find({ rule: { pattern: 'VitePWA($$$)' } })
     if (isAlreadyPatched) {
       console.log(`ℹ️  vite-plugin-pwa is already configured in ${viteConfigPath}`)
-      return
+      return viteConfigCode
     }
 
     // Add import statement
     const imports = rootAST.findAll({ rule: { kind: 'import_statement' } })
-    const hasPWAImport = imports.some(imp => imp.text().includes('vite-plugin-pwa') && imp.text().includes('VitePWA'))
+    const hasPWAImport = viteConfigCode.includes('vite-plugin-pwa') && imports.some((imp) => {
+      const sourceString = imp.children().find(c => c.kind() === 'string')?.text()
+      const isPwaImport = sourceString === "'vite-plugin-pwa'" || sourceString === '"vite-plugin-pwa"'
+      return isPwaImport && imp.text().includes('VitePWA')
+    })
     if (!hasPWAImport) {
       const vitePWAImport = `import { VitePWA } from ${quote}vite-plugin-pwa${quote}`
       if (imports.length > 0) {
@@ -174,13 +175,14 @@ const patchViteConfig = async (viteConfigPath: string, viteConfigCode: string) =
     writeFileSync(viteConfigPath, viteConfigCode, 'utf8')
 
     console.log('✅ vite-plugin-pwa added to vite.config')
+    return viteConfigCode
   } catch (error) {
     console.error('❌ Error while patching the file:', error)
     throw error
   }
 }
 
-const patchVikeHeadManifest = async (cwd: string, viteConfigPath: string) => {
+const patchVikeHeadManifest = async (cwd: string, viteConfigCode: string) => {
   const SKIP_MESSAGE = 'Skipping "manifest" integration:'
   // Check if package.json exists
   const pkgPath = resolve(cwd, 'package.json')
@@ -196,7 +198,6 @@ const patchVikeHeadManifest = async (cwd: string, viteConfigPath: string) => {
   }
 
   // Parse vite.config to find vike plugins and root instead of executing it
-  const viteConfigCode = readFileSync(viteConfigPath, 'utf8')
   const rootAST = parse(lang, viteConfigCode).root()
 
   if (!isVikePluginUsed(rootAST)) {
@@ -208,6 +209,7 @@ const patchVikeHeadManifest = async (cwd: string, viteConfigPath: string) => {
 
   // Check if +Head file exists in pages directory
   let headPath = getPath(join(projectRoot, 'pages'), '+Head', ['tsx', 'jsx'])
+  const linkManifest = `<link rel="manifest" href="/manifest.webmanifest" />`
   if (headPath) {
     // Add manifest link in +Head file if it doesn't exist
     let headContent = readFileSync(headPath, 'utf8')
@@ -231,13 +233,14 @@ const patchVikeHeadManifest = async (cwd: string, viteConfigPath: string) => {
       if (closingSpace) {
         if (!indentStr) indentStr = `${closingSpace.replace(/\r?\n/, '')}${indent}`
       } else {
-        const leadingSpace = (headContent.split(/\r?\n/).find(l => l.includes('</>')) || '').match(/^[ \t]*/)?.[0] || ''
+        const leadingSpaceMatch = headContent.match(/^[ \t]*(?=.*<\/>)/m)
+        const leadingSpace = leadingSpaceMatch ? leadingSpaceMatch[0] : ''
         if (!indentStr) indentStr = `${leadingSpace}${indent}`
         newIndentClosingSpace = `${eol}${leadingSpace}`
       }
 
       const matchIndex = endMatch.index!
-      headContent = `${headContent.slice(0, matchIndex)}${eol}${indentStr}<link rel="manifest" href="/manifest.webmanifest" />${newIndentClosingSpace}${endMatch[2]}${headContent.slice(matchIndex + endMatch[0].length)}`
+      headContent = `${headContent.slice(0, matchIndex)}${eol}${indentStr}${linkManifest}${newIndentClosingSpace}${endMatch[2]}${headContent.slice(matchIndex + endMatch[0].length)}`
 
       writeFileSync(headPath, headContent, 'utf8')
       console.log(`✅ Updated ${headPath} to include manifest link`)
@@ -249,7 +252,7 @@ const patchVikeHeadManifest = async (cwd: string, viteConfigPath: string) => {
     const defaultHead = `export function Head() {
   return (
     <>
-      <link rel="manifest" href="/manifest.webmanifest" />
+      ${linkManifest}
     </>
   )
 }
