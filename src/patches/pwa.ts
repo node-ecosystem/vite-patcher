@@ -27,8 +27,8 @@ export default async function pwa() {
   indent = viteConfigCode.includes('\t') ? '\t' : (viteConfigCode.match(/\r?\n( +)\S/)?.[1] || '  ')
   eol = viteConfigCode.includes('\r\n') ? '\r\n' : '\n'
 
-  const updatedCode = await patchViteConfig(viteConfigPath, viteConfigCode)
-  await patchVikeHeadManifest(cwd, viteConfigPath, updatedCode)
+  const viteConfigCodeUpdated = await patchViteConfig(viteConfigPath, viteConfigCode)
+  await patchVikeHeadManifest(cwd, viteConfigCodeUpdated)
 }
 
 const patchViteConfig = async (viteConfigPath: string, viteConfigCode: string) => {
@@ -184,7 +184,7 @@ const patchViteConfig = async (viteConfigPath: string, viteConfigCode: string) =
   }
 }
 
-const patchVikeHeadManifest = async (cwd: string, viteConfigPath: string, viteConfigCode: string) => {
+const patchVikeHeadManifest = async (cwd: string, viteConfigCode: string) => {
   const SKIP_MESSAGE = 'Skipping "manifest" integration:'
   // Check if package.json exists
   const pkgPath = resolve(cwd, 'package.json')
