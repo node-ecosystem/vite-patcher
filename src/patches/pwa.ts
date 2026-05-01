@@ -110,18 +110,13 @@ export default async function patchViteConfig() {
 
       // Extract raw code inside brackets
       const arrayEndPos = pluginsArray.range().end.index - 1
-      let before = generatedCode.slice(0, startIndex)
+      const before = generatedCode.slice(0, startIndex)
       const after = generatedCode.slice(startIndex)
 
       const innerCode = generatedCode.slice(startIndex, arrayEndPos)
       const hasItems = innerCode.trim().length > 0
 
-      if (hasItems && !innerCode.trimEnd().endsWith(',')) {
-        // Ensure comma goes directly after the last character
-        before = before.replace(/(\S)(\s*)$/, '$1,$2')
-      }
-
-      const formattedPluginCode = pluginCode.split('\n').map((line, idx) => {
+      let formattedPluginCode = pluginCode.split('\n').map((line, idx) => {
         if (idx === 0) return `${innerIndent}${line}`
         const spaceCount = line.match(/^[ ]+/)?.[0].length || 0
         const multiplier = Math.floor(spaceCount / 2)
@@ -132,7 +127,11 @@ export default async function patchViteConfig() {
         return `${innerIndent}${extraIndent}${line.slice(spaceCount)}`
       }).join(eol)
 
-      generatedCode = `${before.trimEnd()}${eol}${formattedPluginCode}${eol}${baseIndent}${after}`
+      if (hasItems) {
+        formattedPluginCode += ','
+      }
+
+      generatedCode = `${before}${eol}${formattedPluginCode}${eol}${after}`
     }
 
     // Save the patched file
