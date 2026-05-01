@@ -16,7 +16,7 @@ export default async function () {
 }
 
 const patchViteConfig = async (viteConfigPath: string) => {
-  console.log(`⏳ Patching file ${viteConfigPath}…`)
+  console.log(`⏳ Patching file ${viteConfigPath} …`)
 
   try {
     let generatedCode = readFileSync(viteConfigPath, 'utf8')
