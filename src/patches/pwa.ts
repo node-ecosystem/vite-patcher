@@ -161,15 +161,31 @@ const patchVikeHeadPage = async (cwd: string, viteConfigPath: string) => {
     return
   }
 
-  const { default: viteConfig }: { default: UserConfig } = await import(`file:${viteConfigPath}`)
+  // Parse vite.config to find vike plugins and root instead of executing it
+  const viteConfigCode = readFileSync(viteConfigPath, 'utf8')
+  const rootAST = parse(Lang.TypeScript, viteConfigCode).root()
 
-  // Check vike in vite.config dependencies
-  if (!viteConfig.plugins?.find((p: any) => '_vikeVitePluginOptions' in p)) {
+  // Check vike in vite.config dependencies (import statement)
+  const isVikeImported = rootAST.find({ rule: { pattern: 'import $_ from \'vike/plugin\'' } }) ||
+    rootAST.find({ rule: { pattern: 'import { $_ } from \'vike/plugin\'' } }) ||
+    rootAST.findAll({ rule: { kind: 'import_statement' } }).some(n => n.text().includes('vike'))
+
+  if (!isVikeImported) {
     console.warn(`⚠️ Vike not detected in package.json or vite.config dependencies. ${SKIP_MESSAGE}`)
     return
   }
 
-  const projectRoot = viteConfig.root ? resolve(cwd, viteConfig.root) : cwd
+  // Try to find vite config "root" property
+  let projectRoot = cwd
+  const rootProp = rootAST.find({ rule: { pattern: 'root: $ROOT' } })
+  if (rootProp) {
+    const rootValMatch = rootProp.getMatch('ROOT')?.text()
+    if (rootValMatch) {
+      // Remove quotes from rootValMatch
+      const strippedRoot = rootValMatch.replaceAll(/^['"]|['"]$/g, '')
+      projectRoot = resolve(cwd, strippedRoot)
+    }
+  }
 
   // Check if +Head file exists in pages directory
   let headPath = getPath(join(projectRoot, 'pages'), '+Head', ['tsx', 'jsx'])
