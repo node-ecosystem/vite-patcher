@@ -48,6 +48,14 @@ Or execute via your package runner without installing as a permanent dependency 
 | **yarn** | `yarn dlx vite-patcher pwa`
 | **pnpm** | `pnpm dlx vite-patcher pwa`
 
+## 🌍 Environment Variables
+
+You can customize the behavior of `vite-patcher` using the following environment variables:
+
+| Variable | Description
+| - | -
+| `VITE_PATCHER_CWD` | Overrides the default working directory (`process.cwd()`). Useful if your `vite.config` is located in a different folder than the one where you run the command.
+
 ## 🛠️ Contributing
 
 Got ideas or want to add a patch string?
