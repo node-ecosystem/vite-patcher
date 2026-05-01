@@ -97,12 +97,14 @@ const patchViteConfig = async (viteConfigPath: string) => {
     let before = generatedCode.slice(0, arrayEndPos)
     const after = generatedCode.slice(arrayEndPos)
 
-    const innerCode = generatedCode.slice(startIndex, arrayEndPos)
-    const hasItems = innerCode.trim().length > 0
-
-    if (hasItems && !before.trimEnd().endsWith(',')) {
-      // Ensure comma goes directly after the last character
-      before = before.replace(/(\S)(\s*)$/, '$1,$2')
+    const arrChildren = pluginsArray!.children()
+    const lastElem = arrChildren.length > 0 ? arrChildren[arrChildren.length - 1] : null
+    if (lastElem) {
+      const lastElemEnd = lastElem.range().end.index
+      const charAfterLastElem = generatedCode.slice(lastElemEnd, arrayEndPos).trim()
+      if (!charAfterLastElem.startsWith(',')) {
+        before = `${generatedCode.slice(0, lastElemEnd)},${generatedCode.slice(lastElemEnd, arrayEndPos)}`
+      }
     }
 
     let formattedPluginCode = pluginCode.split('\n').map((line, idx) => {
