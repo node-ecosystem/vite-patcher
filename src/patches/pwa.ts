@@ -200,7 +200,7 @@ const patchVikeHeadManifest = async (cwd: string, viteConfigPath: string) => {
       console.log(`ℹ️  ${SKIP_MESSAGE} ${headPath} already includes a manifest link`)
     } else {
       const headEol = headContent.includes('\r\n') ? '\r\n' : '\n'
-      const endMatch = headContent.match(/\r?\n([ \t]*)(<\/>)/)
+      const endMatch = headContent.match(/(\r?\n[ \t]*)?(<\/>)/)
       if (!endMatch) {
         console.warn(`⚠️ Could not patch ${headPath} because a closing JSX Fragment (</>) was not found. Please add the manifest link manually.`)
         return
@@ -218,9 +218,22 @@ const patchVikeHeadManifest = async (cwd: string, viteConfigPath: string) => {
       }
 
       const match = headContent.match(/\r?\n( {2,}|\t+)<(?!\/)[^>]+>[ \t]*\r?\n?/)
-      const indentStr = match ? match[1] : `${endMatch[1]}${headIndentUnit}`
+      const closingSpace = endMatch[1] || ''
+      let indentStr = match ? match[1] : `${closingSpace.replace(/\r?\n/, '')}${headIndentUnit}`
 
-      headContent = headContent.replace(/(\r?\n)([ \t]*)(<\/>)/, `${headEol}${indentStr}<link rel="manifest" href="/manifest.webmanifest" />$1$2$3`)
+      // If the closing tag was completely inline, calculate indent from the start of its line
+      if (!closingSpace) {
+        const line = headContent.split(/\r?\n/).find(l => l.includes('</>')) || ''
+        const leadingSpace = line.match(/^[ \t]*/)
+        // Use leading space + 1 indent level for the element, and the base leading space for the closing tag
+        indentStr = match ? match[1] : `${leadingSpace ? leadingSpace[0] : ''}${headIndentUnit}`
+
+        let newIndentClosingSpace = `${headEol}${leadingSpace ? leadingSpace[0] : ''}`
+        headContent = headContent.replace(/(\r?\n[ \t]*)?(<\/>)/, `${headEol}${indentStr}<link rel="manifest" href="/manifest.webmanifest" />${newIndentClosingSpace}$2`)
+      } else {
+        headContent = headContent.replace(/(\r?\n[ \t]*)?(<\/>)/, `${headEol}${indentStr}<link rel="manifest" href="/manifest.webmanifest" />$1$2`)
+      }
+
       writeFileSync(headPath, headContent, 'utf8')
       console.log(`✅ Updated ${headPath} to include manifest link`)
     }
