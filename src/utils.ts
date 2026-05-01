@@ -28,8 +28,8 @@ export const getViteConfigPath = (basepath: string) => {
 }
 
 // Find the configuration object literal and its plugins array
-export const getPluginsData = (astRoot: SgNode<TypesMap, Kinds<TypesMap>>) => {
-  const obj = astRoot.find({ rule: { kind: 'export_statement' } })?.find({ rule: { kind: 'object' } }) || astRoot.find({ rule: { kind: 'object' } })
+export const getPluginsData = (rootAST: SgNode<TypesMap, Kinds<TypesMap>>) => {
+  const obj = rootAST.find({ rule: { kind: 'export_statement' } })?.find({ rule: { kind: 'object' } }) || rootAST.find({ rule: { kind: 'object' } })
   const arr = obj?.find({ rule: { kind: 'property_identifier', regex: '^plugins$' } })?.parent()?.find({ rule: { kind: 'array' } })
   return { obj, arr }
 }

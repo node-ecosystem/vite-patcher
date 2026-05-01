@@ -3,10 +3,13 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { parse, Lang } from '@ast-grep/napi'
+import type { SgNode } from '@ast-grep/napi'
+import type { Kinds, TypesMap } from '@ast-grep/napi/types/staticTypes'
 
 import { createFolder, getPath, getPluginsData, getViteConfigPath } from '../utils.ts'
 
 let isTypescript: boolean
+let rootAST: SgNode<TypesMap, Kinds<TypesMap>>
 
 export default async function () {
   const cwd = process.env.VITE_PATCHER_CWD || process.cwd()
@@ -24,11 +27,11 @@ const patchViteConfig = async (viteConfigPath: string) => {
 
     const eol = generatedCode.includes('\r\n') ? '\r\n' : '\n'
 
-    let root = parse(Lang.TypeScript, generatedCode).root()
+    if (!rootAST) rootAST = parse(Lang.TypeScript, generatedCode).root()
 
     // Add import statement
     if (!generatedCode.includes('vite-plugin-pwa')) {
-      const imports = root.findAll({ rule: { kind: 'import_statement' } })
+      const imports = rootAST.findAll({ rule: { kind: 'import_statement' } })
       if (imports.length > 0) {
         const lastImport = imports.at(-1)!
         const pos = lastImport.range().end.index
@@ -36,16 +39,16 @@ const patchViteConfig = async (viteConfigPath: string) => {
       } else {
         generatedCode = `import { VitePWA } from 'vite-plugin-pwa'${eol}${generatedCode}`
       }
-      root = parse(Lang.TypeScript, generatedCode).root()
+      rootAST = parse(Lang.TypeScript, generatedCode).root()
     }
 
-    let { obj: targetObj, arr: pluginsArray } = getPluginsData(root)
+    let { obj: targetObj, arr: pluginsArray } = getPluginsData(rootAST)
 
     if (targetObj && !pluginsArray) {
       const insertPos = targetObj.range().start.index + 1
       generatedCode = `${generatedCode.slice(0, insertPos)}${eol}  plugins: [],${generatedCode.slice(insertPos)}`
-      root = parse(Lang.TypeScript, generatedCode).root()
-      pluginsArray = getPluginsData(root).arr
+      rootAST = parse(Lang.TypeScript, generatedCode).root()
+      pluginsArray = getPluginsData(rootAST).arr
     }
 
     const pluginsPos = pluginsArray!.range().start.index // '[' pos
@@ -144,7 +147,7 @@ const patchVikeHeadManifest = async (cwd: string, viteConfigPath: string) => {
 
   // Parse vite.config to find vike plugins and root instead of executing it
   const viteConfigCode = readFileSync(viteConfigPath, 'utf8')
-  const rootAST = parse(Lang.TypeScript, viteConfigCode).root()
+  if (!rootAST) rootAST = parse(Lang.TypeScript, viteConfigCode).root()
 
   // Check vike in vite.config dependencies (import statement)
   const isVikeImported = rootAST.find({ rule: { pattern: 'import $_ from \'vike/plugin\'' } }) ||
