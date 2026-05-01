@@ -40,7 +40,7 @@ Quickly inject `vite-plugin-pwa` into your existing `vite.config`:
 | **yarn** | `yarn vite-patcher pwa`
 | **pnpm** | `pnpm vite-patcher pwa`
 
-Or execute via your package runner without installing as a permanent dependency (using npx/dlx):
+Or execute via your package runner without installing as a permanent dependency (using `npx`/`dlx`):
 
 | Package Manager | Command
 | - | -
