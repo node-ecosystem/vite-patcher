@@ -137,19 +137,27 @@ const patchViteConfig = async (viteConfigPath: string) => {
     const after = generatedCode.slice(arrayEndPos)
 
     const arrChildren = pluginsArray!.children()
-    const isNonElementChild = (kind: string) => ['[', ']', ',', 'comment'].includes(kind)
-    const lastElemIndex = arrChildren.reduce((lastIndex, child, index) => {
-      return isNonElementChild(child.kind() as string) ? lastIndex : index
-    }, -1)
+    let lastElemIndex = -1
+    for (let i = arrChildren.length - 1; i >= 0; i--) {
+      const kind = arrChildren[i].kind() as string
+      if (kind !== '[' && kind !== ']' && kind !== ',' && kind !== 'comment') {
+        lastElemIndex = i
+        break
+      }
+    }
 
     const lastElem = lastElemIndex >= 0 ? arrChildren[lastElemIndex] : null
     if (lastElem) {
       const lastElemEnd = lastElem.range().end.index
-      const hasCommaAfterLastElem = arrChildren.slice(lastElemIndex + 1).some((child) => {
-        const kind = child.kind() as string
-        if (kind === 'comment') return false
-        return kind === ','
-      })
+      let hasCommaAfterLastElem = false
+      for (let i = lastElemIndex + 1; i < arrChildren.length; i++) {
+        const kind = arrChildren[i].kind() as string
+        if (kind === ',') {
+          hasCommaAfterLastElem = true
+          break
+        }
+        if (kind !== 'comment' && kind !== ']') break
+      }
       if (!hasCommaAfterLastElem) {
         before = `${generatedCode.slice(0, lastElemEnd)},${generatedCode.slice(lastElemEnd, arrayEndPos)}`
       }
