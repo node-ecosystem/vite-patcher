@@ -8,7 +8,7 @@ export const getPath = (basepath: string, filename: string, extensions = ['ts', 
     const fullPath = resolve(basepath, `${filename}.${ext}`)
     if (existsSync(fullPath)) return fullPath
   }
-  return undefined
+  return
 }
 
 export const createFolder = (path: string) => {

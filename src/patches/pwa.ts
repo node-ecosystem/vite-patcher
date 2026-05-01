@@ -75,8 +75,6 @@ const patchViteConfig = async (viteConfigPath: string) => {
 
     const innerIndent = baseIndent + indentUnit
 
-    const startIndex = pluginsPos + 1
-
     // Generate our VitePWA code as a literal string to insert manually
     const pluginCode = `...(process.env.NODE_ENV === 'production' ? [VitePWA({
   registerType: 'autoUpdate',
@@ -103,7 +101,7 @@ const patchViteConfig = async (viteConfigPath: string) => {
 
     const arrChildren = pluginsArray!.children()
     const validChildren = arrChildren.filter(c => !['[', ']', ','].includes(c.kind() as string))
-    const lastElem = validChildren.length > 0 ? validChildren[validChildren.length - 1] : null
+    const lastElem = validChildren.length > 0 ? validChildren.at(-1) : null
     if (lastElem) {
       const lastElemEnd = lastElem.range().end.index
       const charAfterLastElem = generatedCode.slice(lastElemEnd, arrayEndPos).trim()
@@ -112,10 +110,10 @@ const patchViteConfig = async (viteConfigPath: string) => {
       }
     }
 
-    let formattedPluginCode = pluginCode.split('\n').map((line, idx) => {
+    const formattedPluginCode = pluginCode.split('\n').map((line, idx) => {
       if (idx === 0) return `${innerIndent}${line}`
       // pluginCode is hardcoded to use 2 spaces per indentation level.
-      return innerIndent + line.replace(/^(  )+/g, match => indentUnit.repeat(match.length / 2))
+      return innerIndent + line.replaceAll(/^(  )+/g, match => indentUnit.repeat(match.length / 2))
     }).join(eol)
 
     generatedCode = `${before.trimEnd()}${eol}${formattedPluginCode}${eol}${baseIndent}${after}`
