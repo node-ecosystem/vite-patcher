@@ -162,9 +162,13 @@ const patchVikeHeadManifest = async (cwd: string, viteConfigPath: string) => {
   if (rootProp) {
     const rootValMatch = rootProp.getMatch('ROOT')?.text()
     if (rootValMatch) {
-      // Remove quotes from rootValMatch
-      const strippedRoot = rootValMatch.replaceAll(/^['"]|['"]$/g, '')
-      projectRoot = resolve(cwd, strippedRoot)
+      const stringLiteralMatch = rootValMatch.match(/^(['"])(.*)\1$/s)
+      if (stringLiteralMatch) {
+        const strippedRoot = stringLiteralMatch[2]
+        projectRoot = resolve(cwd, strippedRoot)
+      } else {
+        console.warn(`⚠️ ${SKIP_MESSAGE} Ignoring non-literal vite.config root (${rootValMatch}); using ${cwd} as project root`)
+      }
     }
   }
 
