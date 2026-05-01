@@ -24,8 +24,8 @@ export default async function pwa() {
   indent = viteConfigCode.includes('\t') ? '\t' : (viteConfigCode.match(/\r?\n( +)\S/)?.[1] || '  ')
   eol = viteConfigCode.includes('\r\n') ? '\r\n' : '\n'
 
-  await patchViteConfig(viteConfigPath, viteConfigCode)
-  await patchVikeHeadManifest(cwd, viteConfigPath)
+  const updatedCode = await patchViteConfig(viteConfigPath, viteConfigCode)
+  await patchVikeHeadManifest(cwd, viteConfigPath, updatedCode)
 }
 
 const patchViteConfig = async (viteConfigPath: string, viteConfigCode: string) => {
@@ -39,7 +39,7 @@ const patchViteConfig = async (viteConfigPath: string, viteConfigCode: string) =
       .some(call => call.find({ rule: { kind: 'identifier' } })?.text() === 'VitePWA')
     if (isAlreadyPatched) {
       console.log(`ℹ️  vite-plugin-pwa is already configured in ${viteConfigPath}`)
-      return
+      return viteConfigCode
     }
 
     // Add import statement
@@ -174,13 +174,14 @@ const patchViteConfig = async (viteConfigPath: string, viteConfigCode: string) =
     writeFileSync(viteConfigPath, viteConfigCode, 'utf8')
 
     console.log('✅ vite-plugin-pwa added to vite.config')
+    return viteConfigCode
   } catch (error) {
     console.error('❌ Error while patching the file:', error)
     throw error
   }
 }
 
-const patchVikeHeadManifest = async (cwd: string, viteConfigPath: string) => {
+const patchVikeHeadManifest = async (cwd: string, viteConfigPath: string, viteConfigCode: string) => {
   const SKIP_MESSAGE = 'Skipping "manifest" integration:'
   // Check if package.json exists
   const pkgPath = resolve(cwd, 'package.json')
@@ -196,7 +197,6 @@ const patchVikeHeadManifest = async (cwd: string, viteConfigPath: string) => {
   }
 
   // Parse vite.config to find vike plugins and root instead of executing it
-  const viteConfigCode = readFileSync(viteConfigPath, 'utf8')
   const rootAST = parse(lang, viteConfigCode).root()
 
   if (!isVikePluginUsed(rootAST)) {
