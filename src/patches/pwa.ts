@@ -2,6 +2,7 @@
 
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
+import { parse, Lang } from '@ast-grep/napi'
 import type { UserConfig } from 'vite'
 
 import { createFolder, getPath } from '../utils.ts'
@@ -24,41 +25,45 @@ export default async function patchViteConfig() {
 
     const eol = generatedCode.includes('\r\n') ? '\r\n' : '\n'
 
+    let root = parse(Lang.TypeScript, generatedCode).root()
+
     // Add import statement
     if (!generatedCode.includes('vite-plugin-pwa')) {
-      const lastImportIndex = generatedCode.lastIndexOf('import ')
-      if (lastImportIndex === -1) {
-        generatedCode = `import { VitePWA } from 'vite-plugin-pwa'${eol}${generatedCode}`
+      const imports = root.findAll({ rule: { kind: 'import_statement' } })
+      if (imports.length > 0) {
+        const lastImport = imports.at(-1)!
+        const pos = lastImport.range().end.index
+        generatedCode = `${generatedCode.slice(0, pos)}${eol}import { VitePWA } from 'vite-plugin-pwa'${generatedCode.slice(pos)}`
       } else {
-        const importEndIndex = generatedCode.indexOf(eol, lastImportIndex)
-        if (importEndIndex !== -1) {
-          const pos = importEndIndex + eol.length
-          generatedCode = `${generatedCode.slice(0, pos)}import { VitePWA } from 'vite-plugin-pwa'${eol}${generatedCode.slice(pos)}`
-        }
+        generatedCode = `import { VitePWA } from 'vite-plugin-pwa'${eol}${generatedCode}`
       }
+      root = parse(Lang.TypeScript, generatedCode).root()
     }
 
     // Ensure plugins array exists
-    let pluginsIndex = generatedCode.indexOf('plugins: [')
-    if (pluginsIndex === -1) {
-      // Assume we can safely append it to export default { or defineConfig({
-      const defaultExportIndex = generatedCode.indexOf('export default ')
-      if (defaultExportIndex !== -1) {
-        const configBlockStart = generatedCode.indexOf('{', defaultExportIndex)
-        if (configBlockStart !== -1) {
-          generatedCode = `${generatedCode.slice(0, configBlockStart + 1)}${eol}  plugins: [],${generatedCode.slice(configBlockStart + 1)}`
-          pluginsIndex = generatedCode.indexOf('plugins: [')
-        }
+    let pIdentifier = root.find({ rule: { kind: 'property_identifier', regex: '^plugins$' } })
+    let pluginsArray = pIdentifier?.parent()?.find({ rule: { kind: 'array' } })
+
+    if (!pluginsArray) {
+      // Find the vite config object literal
+      const exportDefault = root.find({ rule: { kind: 'export_statement' } })
+      const targetObj = exportDefault?.find({ rule: { kind: 'object' } }) || root.find({ rule: { kind: 'object' } })
+
+      if (targetObj) {
+        const insertPos = targetObj.range().start.index + 1
+        generatedCode = `${generatedCode.slice(0, insertPos)}${eol}  plugins: [],${generatedCode.slice(insertPos)}`
+        root = parse(Lang.TypeScript, generatedCode).root()
+        pIdentifier = root.find({ rule: { kind: 'property_identifier', regex: '^plugins$' } })
+        pluginsArray = pIdentifier?.parent()?.find({ rule: { kind: 'array' } })
       }
     }
 
-    // Inject string inside the array instead of using AST to preserve layout
-    // pluginsIndex is already computed above
-    if (pluginsIndex !== -1) {
-      const pluginsLineStart = generatedCode.lastIndexOf('\n', pluginsIndex)
+    if (pluginsArray) {
+      const pluginsPos = pluginsArray.range().start.index // '[' pos
+      const pluginsLineStart = generatedCode.lastIndexOf('\n', pluginsPos)
       let baseIndent = ''
       if (pluginsLineStart !== -1) {
-        const linePrefix = generatedCode.slice(pluginsLineStart + 1, pluginsIndex)
+        const linePrefix = generatedCode.slice(pluginsLineStart + 1, pluginsPos)
         const indentMatch = linePrefix.match(/^[ \t]*/)
         if (indentMatch) {
           baseIndent = indentMatch[0]
@@ -73,10 +78,7 @@ export default async function patchViteConfig() {
 
       const innerIndent = baseIndent + indentUnit
 
-      const startIndex = generatedCode.indexOf('[', pluginsIndex) + 1
-      let depth = 1
-      let i = startIndex
-
+      const startIndex = pluginsPos + 1
       isTypescript = targetPath.endsWith('.ts')
 
       // Generate our VitePWA code as a literal string to insert manually
@@ -106,62 +108,31 @@ export default async function patchViteConfig() {
   }
 }))] : [])`
 
-      while (i < generatedCode.length && depth > 0) {
-        const char = generatedCode[i]
-        switch (char) {
-          case "'":
-          case '"':
-          case '\`': {
-            const quote = char
-            i++
-            while (i < generatedCode.length && generatedCode[i] !== quote) {
-              if (generatedCode[i] === '\\\\') i++
-              i++
-            }
-            break
-          }
-          case '[':
-          case '{':
-          case '(': {
-            depth++
-            break
-          }
-          case ']':
-          case '}':
-          case ')': {
-            depth--
-            if (depth === 0) {
-              let before = generatedCode.slice(0, i)
-              const after = generatedCode.slice(i)
+      // Extract raw code inside brackets
+      const arrayEndPos = pluginsArray.range().end.index - 1
+      let before = generatedCode.slice(0, startIndex)
+      const after = generatedCode.slice(startIndex)
 
-              const innerCode = before.slice(startIndex)
-              const hasItems = innerCode.trim().length > 0
+      const innerCode = generatedCode.slice(startIndex, arrayEndPos)
+      const hasItems = innerCode.trim().length > 0
 
-              if (hasItems && !innerCode.trimEnd().endsWith(',')) {
-                // Ensure comma goes directly after the last character, preserving comments/newlines that follow
-                before = before.replace(/(\S)(\s*)$/, '$1,$2')
-              }
-
-              const formattedPluginCode = pluginCode.split('\n').map((line, idx) => {
-                if (idx === 0) return `${innerIndent}${line}`
-
-                // Re-indent pluginCode correctly replacing hardcoded spaces
-                const spaceCount = line.match(/^[ ]+/)?.[0].length || 0
-                const multiplier = Math.floor(spaceCount / 2)
-                const extraIndent = indentUnit === '\t'
-                  ? '\t'.repeat(multiplier)
-                  : ' '.repeat(multiplier * indentUnit.length)
-
-                return `${innerIndent}${extraIndent}${line.slice(spaceCount)}`
-              }).join(eol)
-
-              generatedCode = `${before.trimEnd()}${eol}${formattedPluginCode}${eol}${baseIndent}${after}`
-              break
-            }
-          }
-        }
-        i++
+      if (hasItems && !innerCode.trimEnd().endsWith(',')) {
+        // Ensure comma goes directly after the last character
+        before = before.replace(/(\S)(\s*)$/, '$1,$2')
       }
+
+      const formattedPluginCode = pluginCode.split('\n').map((line, idx) => {
+        if (idx === 0) return `${innerIndent}${line}`
+        const spaceCount = line.match(/^[ ]+/)?.[0].length || 0
+        const multiplier = Math.floor(spaceCount / 2)
+        const extraIndent = indentUnit === '\t'
+          ? '\t'.repeat(multiplier)
+          : ' '.repeat(multiplier * indentUnit.length)
+
+        return `${innerIndent}${extraIndent}${line.slice(spaceCount)}`
+      }).join(eol)
+
+      generatedCode = `${before.trimEnd()}${eol}${formattedPluginCode}${eol}${baseIndent}${after}`
     }
 
     // Save the patched file
