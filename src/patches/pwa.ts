@@ -45,7 +45,11 @@ const patchViteConfig = async (viteConfigPath: string) => {
 
     let { obj: targetObj, arr: pluginsArray } = getPluginsData(rootAST)
 
-    if (targetObj && !pluginsArray) {
+    if (!targetObj) {
+      throw new Error(`Could not find a valid Vite configuration object in ${viteConfigPath}; please fix it and retry`)
+    }
+
+    if (!pluginsArray) {
       const insertPos = targetObj.range().start.index + 1
       generatedCode = `${generatedCode.slice(0, insertPos)}${eol}  plugins: [],${generatedCode.slice(insertPos)}`
       rootAST = parse(lang, generatedCode).root()
