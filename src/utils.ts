@@ -25,10 +25,14 @@ export const getViteConfigPath = (basepath: string) => {
   return targetPath
 }
 
-// Find the configuration object literal and its plugins array
+// Find the exported configuration object literal and its plugins array.
+// Do not fall back to the first object literal in the file, as that may be unrelated.
 export const getPluginsData = (rootAST: SgNode<TypesMap, Kinds<TypesMap>>) => {
-  const obj = rootAST.find({ rule: { kind: 'export_statement' } })?.find({ rule: { kind: 'object' } }) || rootAST.find({ rule: { kind: 'object' } })
-  const arr = obj?.find({ rule: { kind: 'property_identifier', regex: '^plugins$' } })?.parent()?.find({ rule: { kind: 'array' } })
+  const obj = rootAST.find({ rule: { kind: 'export_statement' } })?.find({ rule: { kind: 'object' } })
+  if (!obj) {
+    return { obj: null, arr: null }
+  }
+  const arr = obj.find({ rule: { kind: 'property_identifier', regex: '^plugins$' } })?.parent()?.find({ rule: { kind: 'array' } })
   return { obj, arr }
 }
 
