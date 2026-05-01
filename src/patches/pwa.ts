@@ -6,7 +6,7 @@ import { parse, Lang } from '@ast-grep/napi'
 import type { SgNode } from '@ast-grep/napi'
 import type { Kinds, TypesMap } from '@ast-grep/napi/types/staticTypes'
 
-import { createFolder, getPath, getPluginsData, getViteConfigPath, isVikePluginUsed } from '../utils.ts'
+import { createFolder, getPath, getPluginsData, getProjectRoot, getViteConfigPath, isVikePluginUsed } from '../utils.ts'
 
 let isTypescript: boolean
 let rootAST: SgNode<TypesMap, Kinds<TypesMap>>
@@ -156,17 +156,7 @@ const patchVikeHeadManifest = async (cwd: string, viteConfigPath: string) => {
     return
   }
 
-  // Try to find vite config "root" property
-  let projectRoot = cwd
-  const rootVal = rootAST.find({ rule: { pattern: 'root: $ROOT' } })?.getMatch('ROOT')?.text()
-  if (rootVal) {
-    const match = rootVal.match(/^(['"`])(.*)\1$/s)
-    if (match) {
-      projectRoot = resolve(cwd, match[2])
-    } else {
-      console.warn(`⚠️ Ignoring non-literal vite.config root (${rootVal}); using ${cwd} as project root`)
-    }
-  }
+  const projectRoot = getProjectRoot(rootAST, cwd)
 
   // Check if +Head file exists in pages directory
   let headPath = getPath(join(projectRoot, 'pages'), '+Head', ['tsx', 'jsx'])

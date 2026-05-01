@@ -52,3 +52,15 @@ export const isVikePluginUsed = (rootAST: SgNode<TypesMap, Kinds<TypesMap>>) => 
   }
   return isVikePluginUsed
 }
+
+// Try to find vite config "root" property
+export const getProjectRoot = (rootAST: SgNode<TypesMap, Kinds<TypesMap>>, cwd: string) => {
+  const rootVal = rootAST.find({ rule: { pattern: 'root: $ROOT' } })?.getMatch('ROOT')?.text()
+  if (rootVal) {
+    const match = rootVal.match(/^(['"`])(.*)\1$/s)
+    if (match) return resolve(cwd, match[2])
+    else console.warn(`⚠️ Ignoring non-literal vite.config root (${rootVal}); using ${cwd} as project root`)
+    return cwd
+  }
+  return cwd
+}
