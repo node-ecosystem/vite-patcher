@@ -207,8 +207,18 @@ const patchVikeHeadManifest = async (cwd: string, viteConfigPath: string) => {
       }
 
       // Try to deduce the indentation from a sibling tag, or fallback to closing tag indentation + 1 level
+      let headIndentUnit = '  '
+      if (headContent.includes('\t')) {
+        headIndentUnit = '\t'
+      } else {
+        const spaceMatch = headContent.match(/\r?\n( +)\S/)
+        if (spaceMatch) {
+          headIndentUnit = spaceMatch[1]
+        }
+      }
+
       const match = headContent.match(/\r?\n( {2,}|\t+)<(?!\/)[^>]+>[ \t]*\r?\n?/)
-      const indentStr = match ? match[1] : `${endMatch[1]}${endMatch[1].includes('\t') ? '\t' : '  '}`
+      const indentStr = match ? match[1] : `${endMatch[1]}${headIndentUnit}`
 
       headContent = headContent.replace(/(\r?\n)([ \t]*)(<\/>)/, `${headEol}${indentStr}<link rel="manifest" href="/manifest.webmanifest" />$1$2$3`)
       writeFileSync(headPath, headContent, 'utf8')

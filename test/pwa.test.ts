@@ -157,6 +157,29 @@ describe('pwa.ts patch script', () => {
     }
   })
 
+  test('respects space indentation when +Head has an empty fragment', async () => {
+    const tempDir = await mkdtemp(join(tmpdir(), 'vite-patcher-test-'))
+    try {
+      const configPath = join(tempDir, 'vite.config.ts')
+      const initialTS = `import { defineConfig } from 'vite'\nimport vike from 'vike/plugin'\n\nexport default defineConfig({\n    plugins: [\n        vike()\n    ]\n})\n`
+      await writeFile(configPath, initialTS, 'utf8')
+
+      const initialHead = `export function Head() {\n    return (\n        <>\n        </>\n    )\n}\n`
+      await mockVikeProject(tempDir, initialHead)
+
+      await runScriptInDir(tempDir)
+
+      const updatedHead = await readFile(join(tempDir, 'pages', '+Head.tsx'), 'utf8')
+
+      // Since the first indent in initialHead is 4 spaces ("    return"), unit should be 4 spaces.
+      // Closing tag </> is at 8 spaces. Indent should be 8 + 4 = 12 spaces.
+      assert.ok(updatedHead.includes('            <link rel="manifest" href="/manifest.webmanifest" />\n        </>'), `+Head.tsx empty fragment should correctly compute space indentation unit. Formatted code:\n${updatedHead}`)
+
+    } finally {
+      await rm(tempDir, { recursive: true, force: true })
+    }
+  })
+
   test('handles idempotency (does not duplicate VitePWA if already inserted)', async () => {
     const initial = `import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
