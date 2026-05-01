@@ -18,9 +18,9 @@ export default async function pwa() {
   isTypescript = viteConfigPath.endsWith('.ts')
   lang = isTypescript ? Lang.TypeScript : Lang.JavaScript
 
-  const viteConfigCode = readFileSync(viteConfigPath, 'utf8');
+  const viteConfigCode = readFileSync(viteConfigPath, 'utf8')
 
-  ({ quote, indent, eol } = getTrivia(viteConfigCode))
+  ;({ quote, indent, eol } = getTrivia(viteConfigCode))
 
   const viteConfigCodeUpdated = await patchViteConfig(viteConfigPath, viteConfigCode)
   await patchVikeHeadManifest(cwd, viteConfigCodeUpdated)
