@@ -36,7 +36,9 @@ export const getPluginsData = (rootAST: SgNode<TypesMap, Kinds<TypesMap>>) => {
 
   // Check top-level properties directly to avoid matching nested object properties
   let pluginsPair: SgNode<TypesMap, Kinds<TypesMap>> | null = null
-  for (const c of obj.children()) {
+  const children = obj.children()
+  for (let i = children.length - 1; i >= 0; i--) {
+    const c = children[i]
     const kind = c.kind()
     if (kind === 'shorthand_property_identifier' && c.text() === 'plugins') {
       return { obj, arr: null, error: true }
@@ -82,7 +84,9 @@ export const getProjectRoot = (rootAST: SgNode<TypesMap, Kinds<TypesMap>>, cwd: 
   if (!obj) return cwd
 
   let rootPair: SgNode<TypesMap, Kinds<TypesMap>> | null = null
-  for (const c of obj.children()) {
+  const children = obj.children()
+  for (let i = children.length - 1; i >= 0; i--) {
+    const c = children[i]
     if (c.kind() === 'pair') {
       const keyText = c.children()[0]?.text()
       if (keyText === 'root' || keyText === "'root'" || keyText === '"root"') {
