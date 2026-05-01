@@ -47,7 +47,7 @@ const patchViteConfig = async (viteConfigPath: string) => {
       const insertPos = targetObj.range().start.index + 1
       generatedCode = `${generatedCode.slice(0, insertPos)}${eol}  plugins: [],${generatedCode.slice(insertPos)}`
       rootAST = parse(Lang.TypeScript, generatedCode).root()
-      pluginsArray = getPluginsData(rootAST).arr
+      pluginsArray = getPluginsData(rootAST).arr!
     }
 
     const pluginsPos = pluginsArray!.range().start.index // '[' pos
