@@ -133,17 +133,17 @@ const patchViteConfig = async (viteConfigPath: string) => {
 }
 
 const patchVikeHeadManifest = async (cwd: string, viteConfigPath: string) => {
-  const SKIP_MESSAGE = 'Skipping "manifest" integration.'
+  const SKIP_MESSAGE = 'Skipping "manifest" integration:'
   // Check if package.json exists
   const pkgPath = resolve(cwd, 'package.json')
   if (!existsSync(pkgPath)) {
-    console.warn(`⚠️ Could not find package.json in ${cwd}. ${SKIP_MESSAGE}`)
+    console.warn(`⚠️ ${SKIP_MESSAGE} Could not find package.json in ${cwd}`)
     return
   }
   // Check vike in package.json dependencies
   const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'))
   if (!pkg.dependencies?.vike && !pkg.devDependencies?.vike) {
-    console.warn(`⚠️ Vike not detected in package.json dependencies. ${SKIP_MESSAGE}`)
+    console.warn(`⚠️ ${SKIP_MESSAGE} Vike not detected in package.json dependencies`)
     return
   }
 
@@ -152,7 +152,7 @@ const patchVikeHeadManifest = async (cwd: string, viteConfigPath: string) => {
   if (!rootAST) rootAST = parse(Lang.TypeScript, viteConfigCode).root()
 
   if (!isVikePluginUsed(rootAST)) {
-    console.warn(`⚠️ Vike not detected in vite.config plugins. ${SKIP_MESSAGE}`)
+    console.warn(`⚠️ ${SKIP_MESSAGE} Vike not detected in vite.config plugins`)
     return
   }
 
@@ -174,7 +174,7 @@ const patchVikeHeadManifest = async (cwd: string, viteConfigPath: string) => {
     // Add manifest link in +Head file if it doesn't exist
     let headContent = readFileSync(headPath, 'utf8')
     if (headContent.includes('manifest.webmanifest')) {
-      console.log(`ℹ️  ${headPath} already includes a manifest link. ${SKIP_MESSAGE}`)
+      console.log(`ℹ️  ${SKIP_MESSAGE} ${headPath} already includes a manifest link`)
     } else {
       // Intelligently infer indentation from previous tags inside the fragment
       const match = headContent.match(/\n( {2,}|\t+)<(?!\/)[^>]+>[ \t]*\n?/)
