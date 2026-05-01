@@ -57,30 +57,29 @@ const patchViteConfig = async (viteConfigPath: string) => {
       }
     }
 
-    if (pluginsArray) {
-      const pluginsPos = pluginsArray.range().start.index // '[' pos
-      const pluginsLineStart = generatedCode.lastIndexOf('\n', pluginsPos)
-      let baseIndent = ''
-      if (pluginsLineStart !== -1) {
-        const linePrefix = generatedCode.slice(pluginsLineStart + 1, pluginsPos)
-        const indentMatch = linePrefix.match(/^[ \t]*/)
-        if (indentMatch) {
-          baseIndent = indentMatch[0]
-        }
+    const pluginsPos = pluginsArray!.range().start.index // '[' pos
+    const pluginsLineStart = generatedCode.lastIndexOf('\n', pluginsPos)
+    let baseIndent = ''
+    if (pluginsLineStart !== -1) {
+      const linePrefix = generatedCode.slice(pluginsLineStart + 1, pluginsPos)
+      const indentMatch = linePrefix.match(/^[ \t]*/)
+      if (indentMatch) {
+        baseIndent = indentMatch[0]
       }
+    }
 
-      // Determine indentation mode (tabs vs spaces)
-      let indentUnit = '  '
-      if (baseIndent.includes('\t')) indentUnit = '\t'
-      else if (baseIndent.includes(' ')) indentUnit = ' '.repeat(Math.max(2, baseIndent.length))
-      else if (generatedCode.includes('\t')) indentUnit = '\t'
+    // Determine indentation mode (tabs vs spaces)
+    let indentUnit = '  '
+    if (baseIndent.includes('\t')) indentUnit = '\t'
+    else if (baseIndent.includes(' ')) indentUnit = ' '.repeat(Math.max(2, baseIndent.length))
+    else if (generatedCode.includes('\t')) indentUnit = '\t'
 
-      const innerIndent = baseIndent + indentUnit
+    const innerIndent = baseIndent + indentUnit
 
-      const startIndex = pluginsPos + 1
+    const startIndex = pluginsPos + 1
 
-      // Generate our VitePWA code as a literal string to insert manually
-      const pluginCode = `...(process.env.NODE_ENV === 'production' ? [VitePWA({
+    // Generate our VitePWA code as a literal string to insert manually
+    const pluginCode = `...(process.env.NODE_ENV === 'production' ? [VitePWA({
   registerType: 'autoUpdate',
   devOptions: {
     type: 'module'
@@ -106,27 +105,26 @@ const patchViteConfig = async (viteConfigPath: string) => {
   }
 }))] : [])`
 
-      // Extract raw code inside brackets
-      const arrayEndPos = pluginsArray.range().end.index - 1
-      let before = generatedCode.slice(0, arrayEndPos)
-      const after = generatedCode.slice(arrayEndPos)
+    // Extract raw code inside brackets
+    const arrayEndPos = pluginsArray!.range().end.index - 1
+    let before = generatedCode.slice(0, arrayEndPos)
+    const after = generatedCode.slice(arrayEndPos)
 
-      const innerCode = generatedCode.slice(startIndex, arrayEndPos)
-      const hasItems = innerCode.trim().length > 0
+    const innerCode = generatedCode.slice(startIndex, arrayEndPos)
+    const hasItems = innerCode.trim().length > 0
 
-      if (hasItems && !before.trimEnd().endsWith(',')) {
-        // Ensure comma goes directly after the last character
-        before = before.replace(/(\S)(\s*)$/, '$1,$2')
-      }
-
-      let formattedPluginCode = pluginCode.split('\n').map((line, idx) => {
-        if (idx === 0) return `${innerIndent}${line}`
-        // pluginCode is hardcoded to use 2 spaces per indentation level.
-        return innerIndent + line.replace(/^(  )+/g, match => indentUnit.repeat(match.length / 2))
-      }).join(eol)
-
-      generatedCode = `${before.trimEnd()}${eol}${formattedPluginCode}${eol}${baseIndent}${after}`
+    if (hasItems && !before.trimEnd().endsWith(',')) {
+      // Ensure comma goes directly after the last character
+      before = before.replace(/(\S)(\s*)$/, '$1,$2')
     }
+
+    let formattedPluginCode = pluginCode.split('\n').map((line, idx) => {
+      if (idx === 0) return `${innerIndent}${line}`
+      // pluginCode is hardcoded to use 2 spaces per indentation level.
+      return innerIndent + line.replace(/^(  )+/g, match => indentUnit.repeat(match.length / 2))
+    }).join(eol)
+
+    generatedCode = `${before.trimEnd()}${eol}${formattedPluginCode}${eol}${baseIndent}${after}`
 
     // Save the patched file
     writeFileSync(viteConfigPath, generatedCode)
