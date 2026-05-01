@@ -108,13 +108,20 @@ const patchViteConfig = async (viteConfigPath: string) => {
 
       // Extract raw code inside brackets
       const arrayEndPos = pluginsArray.range().end.index - 1
-      const before = generatedCode.slice(0, startIndex)
-      const after = generatedCode.slice(startIndex)
+      let before = generatedCode.slice(0, arrayEndPos)
+      const after = generatedCode.slice(arrayEndPos)
 
       const innerCode = generatedCode.slice(startIndex, arrayEndPos)
       const hasItems = innerCode.trim().length > 0
 
+      if (hasItems && !before.trimEnd().endsWith(',')) {
+        // Ensure comma goes directly after the last character
+        before = before.replace(/(\S)(\s*)$/, '$1,$2')
+      }
+
       let formattedPluginCode = pluginCode.split('\n').map((line, idx) => {
+        // Only indent the first line if there were NO items previously.
+        // Wait, if there are items, we need to respect the innerIndent anyway because it's a new line.
         if (idx === 0) return `${innerIndent}${line}`
         const spaceCount = line.match(/^[ ]+/)?.[0].length || 0
         const multiplier = Math.floor(spaceCount / 2)
@@ -125,11 +132,7 @@ const patchViteConfig = async (viteConfigPath: string) => {
         return `${innerIndent}${extraIndent}${line.slice(spaceCount)}`
       }).join(eol)
 
-      if (hasItems) {
-        formattedPluginCode += ','
-      }
-
-      generatedCode = `${before}${eol}${formattedPluginCode}${eol}${after}`
+      generatedCode = `${before.trimEnd()}${eol}${formattedPluginCode}${eol}${baseIndent}${after}`
     }
 
     // Save the patched file
