@@ -39,21 +39,23 @@ const patchViteConfig = async (viteConfigPath: string) => {
       root = parse(Lang.TypeScript, generatedCode).root()
     }
 
-    // Ensure plugins array exists
-    let pIdentifier = root.find({ rule: { kind: 'property_identifier', regex: '^plugins$' } })
-    let pluginsArray = pIdentifier?.parent()?.find({ rule: { kind: 'array' } })
+    // Find the configuration object literal
+    const exportDefault = root.find({ rule: { kind: 'export_statement' } })
+    const targetObj = exportDefault?.find({ rule: { kind: 'object' } }) || root.find({ rule: { kind: 'object' } })
 
-    if (!pluginsArray) {
-      // Find the vite config object literal
-      const exportDefault = root.find({ rule: { kind: 'export_statement' } })
-      const targetObj = exportDefault?.find({ rule: { kind: 'object' } }) || root.find({ rule: { kind: 'object' } })
+    let pluginsArray
+    if (targetObj) {
+      const pIdentifier = targetObj.find({ rule: { kind: 'property_identifier', regex: '^plugins$' } })
+      pluginsArray = pIdentifier?.parent()?.find({ rule: { kind: 'array' } })
 
-      if (targetObj) {
+      if (!pluginsArray) {
         const insertPos = targetObj.range().start.index + 1
         generatedCode = `${generatedCode.slice(0, insertPos)}${eol}  plugins: [],${generatedCode.slice(insertPos)}`
         root = parse(Lang.TypeScript, generatedCode).root()
-        pIdentifier = root.find({ rule: { kind: 'property_identifier', regex: '^plugins$' } })
-        pluginsArray = pIdentifier?.parent()?.find({ rule: { kind: 'array' } })
+
+        const newTargetObj = root.find({ rule: { kind: 'export_statement' } })?.find({ rule: { kind: 'object' } }) || root.find({ rule: { kind: 'object' } })
+        const newPIdentifier = newTargetObj?.find({ rule: { kind: 'property_identifier', regex: '^plugins$' } })
+        pluginsArray = newPIdentifier?.parent()?.find({ rule: { kind: 'array' } })
       }
     }
 
