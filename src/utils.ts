@@ -16,3 +16,11 @@ export const createFolder = (path: string) => {
     mkdirSync(path, { recursive: true })
   }
 }
+
+export const getViteConfigPath = (basepath: string) => {
+  const targetPath = getPath(basepath, 'vite.config')
+  if (!targetPath) {
+    throw new Error('❌ vite.config not found')
+  }
+  return targetPath
+}

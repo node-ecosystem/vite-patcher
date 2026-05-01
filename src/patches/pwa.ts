@@ -3,25 +3,23 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { parse, Lang } from '@ast-grep/napi'
-import type { UserConfig } from 'vite'
 
-import { createFolder, getPath } from '../utils.ts'
+import { createFolder, getPath, getViteConfigPath } from '../utils.ts'
 
 let isTypescript: boolean
 
-export default async function patchViteConfig() {
+export default async function () {
   const cwd = process.env.VITE_PATCHER_CWD || process.cwd()
-  // Find the vite.config file
-  const targetPath = getPath(cwd, 'vite.config')
+  const viteConfigPath = getViteConfigPath(cwd)
+  await patchViteConfig(viteConfigPath)
+  await patchVikeHeadPage(cwd, viteConfigPath)
+}
 
-  if (!targetPath) {
-    throw new Error('❌ vite.config not found')
-  }
-
-  console.log(`⏳ Patching file ${targetPath}…`)
+const patchViteConfig = async (viteConfigPath: string) => {
+  console.log(`⏳ Patching file ${viteConfigPath}…`)
 
   try {
-    let generatedCode = readFileSync(targetPath, 'utf8')
+    let generatedCode = readFileSync(viteConfigPath, 'utf8')
 
     const eol = generatedCode.includes('\r\n') ? '\r\n' : '\n'
 
@@ -79,7 +77,7 @@ export default async function patchViteConfig() {
       const innerIndent = baseIndent + indentUnit
 
       const startIndex = pluginsPos + 1
-      isTypescript = targetPath.endsWith('.ts')
+      isTypescript = viteConfigPath.endsWith('.ts')
 
       // Generate our VitePWA code as a literal string to insert manually
       const pluginCode = `...(process.env.NODE_ENV === 'production' ? [VitePWA({
@@ -135,11 +133,9 @@ export default async function patchViteConfig() {
     }
 
     // Save the patched file
-    writeFileSync(targetPath, generatedCode)
+    writeFileSync(viteConfigPath, generatedCode)
 
     console.log('✅ vite-plugin-pwa added to vite.config')
-
-    await patchVikeHeadPage(cwd, targetPath)
   } catch (error) {
     console.error('❌ Error while patching the file:', error)
     throw error
