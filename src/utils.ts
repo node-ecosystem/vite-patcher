@@ -116,9 +116,9 @@ export const getProjectRoot = (rootAST: SgNode<TypesMap, Kinds<TypesMap>>, cwd: 
 export const getTrivia = (code: string) => {
   let singleQuotesCount = 0
   let doubleQuotesCount = 0
-  for (const element of code) {
-    if (element === "'") singleQuotesCount++
-    else if (element === '"') doubleQuotesCount++
+  for (const char of code) {
+    if (char === "'") singleQuotesCount++
+    else if (char === '"') doubleQuotesCount++
   }
 
   const quote = singleQuotesCount >= doubleQuotesCount ? "'" : '"'
