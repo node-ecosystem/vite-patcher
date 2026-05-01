@@ -1,6 +1,6 @@
 import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtemp, rm, writeFile, readFile } from 'node:fs/promises'
+import { mkdtemp, rm, writeFile, readFile, mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { exec } from 'node:child_process'
@@ -16,6 +16,16 @@ const runScriptInDir = async (cwd: string) => {
   return execAsync(`node "${PWA_SCRIPT}" pwa`, {
     env: { ...process.env, VITE_PATCHER_CWD: cwd }
   })
+}
+
+const mockVikeProject = async (cwd: string, headContent: string) => {
+  await writeFile(join(cwd, 'package.json'), JSON.stringify({
+    dependencies: { vike: '^0.4.0' }
+  }), 'utf8')
+
+  const pagesDir = join(cwd, 'pages')
+  await mkdir(pagesDir, { recursive: true })
+  await writeFile(join(pagesDir, '+Head.tsx'), headContent, 'utf8')
 }
 
 describe('pwa.ts patch script', () => {
@@ -82,5 +92,59 @@ describe('pwa.ts patch script', () => {
       'VitePWA',
       "react(),\n    ...(process.env.NODE_ENV === 'production' ? [VitePWA({"
     ])
+  })
+
+  test('respects tab indentation in vite.config and vike +Head (patchViteConfig & patchVikeHeadManifest)', async () => {
+    const tempDir = await mkdtemp(join(tmpdir(), 'vite-patcher-test-'))
+    try {
+      const configPath = join(tempDir, 'vite.config.ts')
+      const initialTS = `import { defineConfig } from 'vite'\nimport vike from 'vike/plugin'\n\nexport default defineConfig({\n\tplugins: [\n\t\tvike()\n\t]\n})\n`
+      await writeFile(configPath, initialTS, 'utf8')
+
+      const initialHead = `export function Head() {\n\treturn (\n\t\t<>\n\t\t\t<title>My App</title>\n\t\t</>\n\t)\n}\n`
+      await mockVikeProject(tempDir, initialHead)
+
+      await runScriptInDir(tempDir)
+
+      const updatedConfig = await readFile(configPath, 'utf8')
+      const updatedHead = await readFile(join(tempDir, 'pages', '+Head.tsx'), 'utf8')
+
+      // Verify that tabs were respected in vite.config.ts
+      assert.ok(updatedConfig.includes('\t\tvike(),\n\t\t...(process.env.NODE_ENV'), `vite.config.ts should use tab indentation. Got:\n${updatedConfig}`)
+      assert.ok(updatedConfig.includes('\t\t\tregisterType: \'autoUpdate\','), `deep vite.config.ts should use double tab indentation. Got:\n${updatedConfig}`)
+
+      // Verify that tabs were respected in +Head.tsx
+      assert.ok(updatedHead.includes('\t\t\t<link rel="manifest" href="/manifest.webmanifest" />\n\t\t</>'), `+Head.tsx should use tab indentation. Got:\n${updatedHead}`)
+
+    } finally {
+      await rm(tempDir, { recursive: true, force: true })
+    }
+  })
+
+  test('respects spaces indentation in vite.config and vike +Head (patchViteConfig & patchVikeHeadManifest)', async () => {
+    const tempDir = await mkdtemp(join(tmpdir(), 'vite-patcher-test-'))
+    try {
+      const configPath = join(tempDir, 'vite.config.ts')
+      const initialTS = `import { defineConfig } from 'vite'\nimport vike from 'vike/plugin'\n\nexport default defineConfig({\n    plugins: [\n        vike()\n    ]\n})\n`
+      await writeFile(configPath, initialTS, 'utf8')
+
+      const initialHead = `export function Head() {\n    return (\n        <>\n            <title>My App</title>\n        </>\n    )\n}\n`
+      await mockVikeProject(tempDir, initialHead)
+
+      await runScriptInDir(tempDir)
+
+      const updatedConfig = await readFile(configPath, 'utf8')
+      const updatedHead = await readFile(join(tempDir, 'pages', '+Head.tsx'), 'utf8')
+
+      // Verify that spaces were respected in vite.config.ts (4 spaces base + 4 spaces inner = 8 spaces)
+      assert.ok(updatedConfig.includes('        vike(),\n        ...(process.env.NODE_ENV'), `vite.config.ts should use space indentation. Formatted code:\n${updatedConfig}`)
+      assert.ok(updatedConfig.includes('            registerType: \'autoUpdate\','), 'deep vite.config.ts should use 12 space indentation')
+
+      // Verify that spaces were respected in +Head.tsx
+      assert.ok(updatedHead.includes('            <link rel="manifest" href="/manifest.webmanifest" />\n        </>'), `+Head.tsx should use space indentation. Formatted code:\n${updatedHead}`)
+
+    } finally {
+      await rm(tempDir, { recursive: true, force: true })
+    }
   })
 })

@@ -194,7 +194,18 @@ const patchVikeHeadManifest = async (cwd: string, viteConfigPath: string) => {
     if (headContent.includes('manifest.webmanifest')) {
       console.log(`ℹ️ ${headPath} already includes a manifest link. ${SKIP_MESSAGE}`)
     } else {
-      headContent = headContent.replace(/(\s*)(<\/>)/, `$1  <link rel="manifest" href="/manifest.webmanifest" />$1$2`)
+      // Intelligently infer indentation from previous tags inside the fragment
+      const match = headContent.match(/\n( {2,}|\t+)<(?!\/)[^>]+>[ \t]*\n?/)
+      const endMatch = headContent.match(/\n([ \t]*)(<\/>)/)
+      const linkTag = `<link rel="manifest" href="/manifest.webmanifest" />`
+      if (match && endMatch) {
+        const indentStr = match[1]
+        headContent = headContent.replace(/(\n)([ \t]*)(<\/>)/, `\n${indentStr}${linkTag}$1$2$3`)
+      } else {
+        const fallbackIndentMatch = headContent.match(/\n([ \t]*)(<\/>)/)
+        const fallbackSpace = (fallbackIndentMatch && fallbackIndentMatch[1].includes('\t')) ? '\t' : '  '
+        headContent = headContent.replace(/(\n)([ \t]*)(<\/>)/, `$1$2${fallbackSpace}${linkTag}$1$2$3`)
+      }
       writeFileSync(headPath, headContent, 'utf8')
       console.log(`✅ Updated ${headPath} to include manifest link`)
     }
