@@ -74,21 +74,13 @@ const patchViteConfig = async (viteConfigPath: string) => {
     // Generate our VitePWA code as a literal string to insert manually
     const pluginCode = `...(process.env.NODE_ENV === 'production' ? [VitePWA({
   registerType: 'autoUpdate',
-  devOptions: {
-    type: 'module'
-  },
+  devOptions: { type: 'module' },
   manifest: {
     name: 'My App',
     short_name: 'MyApp',
     theme_color: '#3F51B5',
     background_color: '#3367D6',
-    icons: [
-      {
-        src: '/icons/logo-192.png',
-        sizes: '192x192',
-        type: 'image/png'
-      }
-    ]
+    icons: [{ src: '/icons/logo-192.png', sizes: '192x192', type: 'image/png' }]
   }
 }).map((plugin) => ({
   ...plugin,
