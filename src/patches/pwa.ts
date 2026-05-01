@@ -120,16 +120,9 @@ const patchViteConfig = async (viteConfigPath: string) => {
       }
 
       let formattedPluginCode = pluginCode.split('\n').map((line, idx) => {
-        // Only indent the first line if there were NO items previously.
-        // Wait, if there are items, we need to respect the innerIndent anyway because it's a new line.
         if (idx === 0) return `${innerIndent}${line}`
-        const spaceCount = line.match(/^[ ]+/)?.[0].length || 0
-        const multiplier = Math.floor(spaceCount / 2)
-        const extraIndent = indentUnit === '\t'
-          ? '\t'.repeat(multiplier)
-          : ' '.repeat(multiplier * indentUnit.length)
-
-        return `${innerIndent}${extraIndent}${line.slice(spaceCount)}`
+        // pluginCode is hardcoded to use 2 spaces per indentation level.
+        return innerIndent + line.replace(/^(  )+/g, match => indentUnit.repeat(match.length / 2))
       }).join(eol)
 
       generatedCode = `${before.trimEnd()}${eol}${formattedPluginCode}${eol}${baseIndent}${after}`
@@ -155,7 +148,7 @@ const patchVikeHeadManifest = async (cwd: string, viteConfigPath: string) => {
   }
   // Check vike in package.json dependencies
   const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'))
-  if (!((pkg.dependencies && pkg.dependencies.vike) || (pkg.devDependencies && pkg.devDependencies.vike))) {
+  if (!pkg.dependencies?.vike && !pkg.devDependencies?.vike) {
     console.warn(`⚠️ Vike not detected in package.json dependencies. ${SKIP_MESSAGE}`)
     return
   }
