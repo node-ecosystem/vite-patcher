@@ -35,7 +35,14 @@ export const getPluginsData = (rootAST: SgNode<TypesMap, Kinds<TypesMap>>) => {
   if (!obj) return { obj: null, arr: null }
 
   // Check if there's a "plugins" property
-  const existingPluginsProp = obj.find({ rule: { kind: 'property_identifier', regex: '^plugins$' } })
+  const existingPluginsProp = obj.find({
+    rule: {
+      any: [
+        { kind: 'property_identifier', regex: '^plugins$' },
+        { kind: 'string', regex: '^[\'"]plugins[\'"]$' }
+      ]
+    }
+  })
   if (!existingPluginsProp) return { obj, arr: null }
 
   // If there's a "plugins" property, it must be an array literal; otherwise we can't safely patch it
