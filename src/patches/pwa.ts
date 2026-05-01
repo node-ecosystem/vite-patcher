@@ -137,7 +137,7 @@ const patchViteConfig = async (viteConfigPath: string) => {
     const after = generatedCode.slice(arrayEndPos)
 
     const arrChildren = pluginsArray!.children()
-    const validChildren = arrChildren.filter(c => !['[', ']', ','].includes(c.kind() as string))
+    const validChildren = arrChildren.filter(c => !['[', ']', ',', 'comment'].includes(c.kind() as string))
     const lastElem = validChildren.length > 0 ? validChildren.at(-1) : null
     if (lastElem) {
       const lastElemEnd = lastElem.range().end.index
