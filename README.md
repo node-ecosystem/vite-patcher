@@ -2,71 +2,42 @@
 
 Inject Vite Plugins and related configurations into your [vite.config](https://vite.dev/config).
 
-## Supported Plugins
+## ℹ️ Supported Plugins
 
-- **[vite-plugin-pwa](https://www.npmjs.com/package/vite-plugin-pwa)** ~ Add [Progressive Web App (PWA)](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps)
-  - Support [vike](https://www.npmjs.com/package/vike) too
+| Command | Plugin | Description
+| - | - | -
+[pwa](/#pwa) | [vite-plugin-pwa](https://www.npmjs.com/package/vite-plugin-pwa) | Add [Progressive Web App (PWA)](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps) ~ _Support [vike](https://www.npmjs.com/package/vike) too_
 
-## Installation
+## ⚙️ Installation
 
-Using npm:
-```bash
-npm install -D vite-patcher
-```
+| Package Manager | Command
+| - | -
+| **npm** | `npm install -D vite-patcher`
+| **yarn** | `yarn add -D vite-patcher`
+| **pnpm** | `pnpm add -D vite-patcher`
 
-Using yarn:
-```bash
-yarn add -D vite-patcher
-```
-
-Using pnpm:
-```bash
-pnpm add -D vite-patcher
-```
-
-## Usage
+## 📖 Usage
 
 Run the CLI tool directly to apply patches to your Vite configuration.
 
 ### pwa
 
-Apply the PWA patch
+Apply the PWA patch:
 
-Using npm:
-```bash
-npm run vite-patcher pwa
-```
+| Package Manager | Command
+| - | -
+| **npm** | `npm run vite-patcher pwa`
+| **yarn** | `yarn vite-patcher pwa`
+| **pnpm** | `pnpm vite-patcher pwa`
 
-Using yarn:
-```bash
-yarn vite-patcher pwa
-```
+Or execute:
 
-Using pnpm:
-```bash
-pnpm vite-patcher pwa
-```
+| Package Manager | Command
+| - | -
+| **npm** | `npx vite-patcher pwa`
+| **yarn** | `yarn dlx vite-patcher pwa`
+| **pnpm** | `pnpm dlx vite-patcher pwa`
 
-Or execute
+## 📜 License
 
-Using npm:
-```bash
-npx vite-patcher pwa
-```
-
-Using yarn:
-```bash
-yarn dlx vite-patcher pwa
-```
-
-Using pnpm:
-```bash
-pnpm dlx vite-patcher pwa
-```
-
-## Contributing
-
-1. Clone the repository.
-2. Install dependencies with `yarn install`.
-3. Build the project using `yarn build` (uses `tsdown`).
-4. Run tests with `yarn test`.
+This project is licensed under the [MIT License](LICENSE).
