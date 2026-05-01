@@ -14,6 +14,7 @@ export default async function pwa() {
   const viteConfigPath = getViteConfigPath(cwd)
   isTypescript = viteConfigPath.endsWith('.ts')
   lang = isTypescript ? Lang.TypeScript : Lang.JavaScript
+
   await patchViteConfig(viteConfigPath)
   await patchVikeHeadManifest(cwd, viteConfigPath)
 }
