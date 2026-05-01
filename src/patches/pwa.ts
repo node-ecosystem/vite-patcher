@@ -3,13 +3,10 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { parse, Lang } from '@ast-grep/napi'
-import type { SgNode } from '@ast-grep/napi'
-import type { Kinds, TypesMap } from '@ast-grep/napi/types/staticTypes'
 
 import { createFolder, getPath, getPluginsData, getProjectRoot, getViteConfigPath, isVikePluginUsed } from '../utils.ts'
 
 let isTypescript: boolean
-let rootAST: SgNode<TypesMap, Kinds<TypesMap>>
 
 export default async function () {
   const cwd = process.env.VITE_PATCHER_CWD || process.cwd()
@@ -27,7 +24,7 @@ const patchViteConfig = async (viteConfigPath: string) => {
 
     const eol = generatedCode.includes('\r\n') ? '\r\n' : '\n'
 
-    if (!rootAST) rootAST = parse(Lang.TypeScript, generatedCode).root()
+    let rootAST = parse(Lang.TypeScript, generatedCode).root()
 
     // Add import statement
     const imports = rootAST.findAll({ rule: { kind: 'import_statement' } })
@@ -149,7 +146,7 @@ const patchVikeHeadManifest = async (cwd: string, viteConfigPath: string) => {
 
   // Parse vite.config to find vike plugins and root instead of executing it
   const viteConfigCode = readFileSync(viteConfigPath, 'utf8')
-  if (!rootAST) rootAST = parse(Lang.TypeScript, viteConfigCode).root()
+  const rootAST = parse(Lang.TypeScript, viteConfigCode).root()
 
   if (!isVikePluginUsed(rootAST)) {
     console.warn(`⚠️ ${SKIP_MESSAGE} Vike not detected in vite.config plugins`)
