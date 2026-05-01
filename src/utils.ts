@@ -71,9 +71,24 @@ export const isVikePluginUsed = (rootAST: SgNode<TypesMap, Kinds<TypesMap>>) => 
 
 // Try to find vite config "root" property
 export const getProjectRoot = (rootAST: SgNode<TypesMap, Kinds<TypesMap>>, cwd: string) => {
-  const rootVal = rootAST.find({ rule: { pattern: 'root: $ROOT' } })?.getMatch('ROOT')?.text()
-  if (!rootVal) return cwd
+  const { obj } = getPluginsData(rootAST)
+  if (!obj) return cwd
 
+  const rootProp = obj.find({
+    rule: {
+      any: [
+        { kind: 'property_identifier', regex: '^root$' },
+        { kind: 'string', regex: '^[\'"]root[\'"]$' }
+      ]
+    }
+  })
+
+  if (!rootProp) return cwd
+
+  const rootValNode = rootProp.parent()?.children().find(c => c.kind() === 'string')
+  if (!rootValNode) return cwd
+
+  const rootVal = rootValNode.text()
   const match = rootVal.match(/^(['"`])(.*)\1$/s)
   if (match) return resolve(cwd, match[2])
 
