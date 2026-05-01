@@ -32,7 +32,9 @@ export const getPluginsData = (rootAST: SgNode<TypesMap, Kinds<TypesMap>>) => {
   if (!obj) {
     return { obj: null, arr: null }
   }
-  const arr = obj.find({ rule: { kind: 'property_identifier', regex: '^plugins$' } })?.parent()?.find({ rule: { kind: 'array' } })
+  const arr = obj
+    .find({ rule: { kind: 'property_identifier', regex: '^plugins$' } })
+    ?.parent()?.find({ rule: { kind: 'array' } })
   return { obj, arr }
 }
 
