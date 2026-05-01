@@ -33,7 +33,7 @@ const patchViteConfig = async (viteConfigPath: string, viteConfigCode: string) =
     let rootAST = parse(lang, viteConfigCode).root()
 
     // eslint-disable-next-line unicorn/prefer-array-some
-    const isAlreadyPatched = !!rootAST.find({ rule: { pattern: 'VitePWA($_)' } })
+    const isAlreadyPatched = !!rootAST.find({ rule: { pattern: 'VitePWA($$$)' } })
     if (isAlreadyPatched) {
       console.log(`ℹ️  vite-plugin-pwa is already configured in ${viteConfigPath}`)
       return viteConfigCode
