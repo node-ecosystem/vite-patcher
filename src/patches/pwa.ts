@@ -18,9 +18,9 @@ export default async function pwa() {
   isTypescript = viteConfigPath.endsWith('.ts')
   lang = isTypescript ? Lang.TypeScript : Lang.JavaScript
 
-  const viteConfigCode = readFileSync(viteConfigPath, 'utf8')
+  const viteConfigCode = readFileSync(viteConfigPath, 'utf8');
 
-    ; ({ quote, indent, eol } = getTrivia(viteConfigCode))
+  ({ quote, indent, eol } = getTrivia(viteConfigCode))
 
   const viteConfigCodeUpdated = await patchViteConfig(viteConfigPath, viteConfigCode)
   await patchVikeHeadManifest(cwd, viteConfigCodeUpdated)
@@ -32,6 +32,7 @@ const patchViteConfig = async (viteConfigPath: string, viteConfigCode: string) =
   try {
     let rootAST = parse(lang, viteConfigCode).root()
 
+    // eslint-disable-next-line unicorn/prefer-array-some
     const isAlreadyPatched = !!rootAST.find({ rule: { pattern: 'VitePWA($_)' } })
     if (isAlreadyPatched) {
       console.log(`ℹ️  vite-plugin-pwa is already configured in ${viteConfigPath}`)
