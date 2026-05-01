@@ -185,7 +185,7 @@ const patchVikeHeadManifest = async (cwd: string, viteConfigPath: string) => {
     // Add manifest link in +Head file if it doesn't exist
     let headContent = readFileSync(headPath, 'utf8')
     if (headContent.includes('manifest.webmanifest')) {
-      console.log(`ℹ️ ${headPath} already includes a manifest link. ${SKIP_MESSAGE}`)
+      console.log(`ℹ️  ${headPath} already includes a manifest link. ${SKIP_MESSAGE}`)
     } else {
       // Intelligently infer indentation from previous tags inside the fragment
       const match = headContent.match(/\n( {2,}|\t+)<(?!\/)[^>]+>[ \t]*\n?/)
