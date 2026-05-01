@@ -207,7 +207,7 @@ const patchVikeHeadManifest = async (cwd: string, viteConfigPath: string) => {
         return
       }
 
-      let headIndentUnit = headContent.includes('\t') ? '\t' : (headContent.match(/\r?\n( +)\S/)?.[1] || '  ')
+      const headIndentUnit = headContent.includes('\t') ? '\t' : (headContent.match(/\r?\n( +)\S/)?.[1] || '  ')
 
       const match = headContent.match(/\r?\n( {2,}|\t+)<(?!\/)[^>]+>[ \t]*\r?\n?/)
       const closingSpace = endMatch[1] || ''
@@ -216,12 +216,12 @@ const patchVikeHeadManifest = async (cwd: string, viteConfigPath: string) => {
       let newIndentClosingSpace = closingSpace
 
       // If the closing tag was completely inline, calculate indent from the start of its line
-      if (!closingSpace) {
+      if (closingSpace) {
+        if (!indentStr) indentStr = `${closingSpace.replace(/\r?\n/, '')}${headIndentUnit}`
+      } else {
         const leadingSpace = (headContent.split(/\r?\n/).find(l => l.includes('</>')) || '').match(/^[ \t]*/)?.[0] || ''
         if (!indentStr) indentStr = `${leadingSpace}${headIndentUnit}`
         newIndentClosingSpace = `${headEol}${leadingSpace}`
-      } else {
-        if (!indentStr) indentStr = `${closingSpace.replace(/\r?\n/, '')}${headIndentUnit}`
       }
 
       const matchIndex = endMatch.index!
