@@ -45,6 +45,7 @@ export const getPluginsData = (rootAST: SgNode<TypesMap, Kinds<TypesMap>>) => {
       const keyText = c.children()[0]?.text()
       if (keyText === 'plugins' || keyText === "'plugins'" || keyText === '"plugins"') {
         pluginsPair = c
+        break
       }
     }
   }
@@ -80,11 +81,16 @@ export const getProjectRoot = (rootAST: SgNode<TypesMap, Kinds<TypesMap>>, cwd: 
   const { obj } = getPluginsData(rootAST)
   if (!obj) return cwd
 
-  const rootPair = obj.children().find(c => {
-    if (c.kind() !== 'pair') return false
-    const keyText = c.children()[0]?.text()
-    return keyText === 'root' || keyText === "'root'" || keyText === '"root"'
-  })
+  let rootPair = null
+  for (const c of obj.children()) {
+    if (c.kind() === 'pair') {
+      const keyText = c.children()[0]?.text()
+      if (keyText === 'root' || keyText === "'root'" || keyText === '"root"') {
+        rootPair = c
+        break
+      }
+    }
+  }
 
   if (!rootPair) return cwd
 
