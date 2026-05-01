@@ -32,9 +32,7 @@ const patchViteConfig = async (viteConfigPath: string, viteConfigCode: string) =
   try {
     let rootAST = parse(lang, viteConfigCode).root()
 
-    const isAlreadyPatched = rootAST
-      .findAll({ rule: { kind: 'call_expression' } })
-      .some(call => call.find({ rule: { kind: 'identifier' } })?.text() === 'VitePWA')
+    const isAlreadyPatched = !!rootAST.find({ rule: { pattern: 'VitePWA($_)' } })
     if (isAlreadyPatched) {
       console.log(`ℹ️  vite-plugin-pwa is already configured in ${viteConfigPath}`)
       return viteConfigCode
