@@ -40,7 +40,11 @@ export const getPluginsData = (rootAST: SgNode<TypesMap, Kinds<TypesMap>>) => {
     const keyText = p.children()[0]?.text()
     return keyText === 'plugins' || keyText === "'plugins'" || keyText === '"plugins"'
   })
-
+  // Detect shorthand property `plugins` e.g., `export default { plugins }`
+  const shorthand = obj.children().find(c => c.kind() === 'shorthand_property_identifier' && c.text() === 'plugins')
+  if (shorthand) {
+    return { obj, arr: null, error: true }
+  }
   if (!pluginsPair) return { obj, arr: null }
 
   // The value must be directly an array literal

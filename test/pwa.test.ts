@@ -231,6 +231,28 @@ export default defineConfig({
     }
   })
 
+  test('throws if plugins is a shorthand property', async () => {
+    const initial = `import { defineConfig } from 'vite'
+const plugins = []
+export default defineConfig({
+  plugins
+})
+`
+    const tempDir = await mkdtemp(join(tmpdir(), 'vite-patcher-test-'))
+    try {
+      const configPath = join(tempDir, 'vite.config.ts')
+      await writeFile(configPath, initial, 'utf8')
+
+      await assert.rejects(
+        runScriptInDir(tempDir),
+        /The "plugins" property in .*vite\.config\.ts is not an array literal/,
+        'Should reject if plugins is a shorthand'
+      )
+    } finally {
+      await rm(tempDir, { recursive: true, force: true })
+    }
+  })
+
   test('does not match nested plugins or root properties', async () => {
     const initial = `import { defineConfig } from 'vite'
 export default defineConfig({
