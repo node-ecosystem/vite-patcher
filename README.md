@@ -6,9 +6,9 @@ Inject Vite Plugins and related configurations without any effort into your [vit
 
 ## ✨ Features
 
-❯ **Automated Configuration:** Say goodbye to manual editing. Let the tool seamlessly inject plugin configurations into your `vite.config.*`.
-❯ **Smart Formatting:** The tool respects your existing indentation (tabs vs spaces) and preserves standard quotes.
-❯ **Vike Integration:** Detects when [vike](https://vike.dev) is included in your project and automatically handles edge cases (e.g., bypassing client/server double injection conflicts).
+❯ **Automated Configuration:** Say goodbye to manual editing. Let the tool seamlessly inject plugin configurations into your `vite.config.*`.<br>
+❯ **Smart Formatting:** The tool respects your existing indentation (tabs vs spaces) and preserves standard quotes.<br>
+❯ **Vike Integration:** Detects when [vike](https://vike.dev) is included in your project and automatically handles edge cases (e.g., bypassing client/server double injection conflicts).<br>
 
 ## ℹ️ Supported Plugins
 
