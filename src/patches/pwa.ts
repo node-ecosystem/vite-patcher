@@ -206,33 +206,24 @@ const patchVikeHeadManifest = async (cwd: string, viteConfigPath: string) => {
         return
       }
 
-      // Try to deduce the indentation from a sibling tag, or fallback to closing tag indentation + 1 level
-      let headIndentUnit = '  '
-      if (headContent.includes('\t')) {
-        headIndentUnit = '\t'
-      } else {
-        const spaceMatch = headContent.match(/\r?\n( +)\S/)
-        if (spaceMatch) {
-          headIndentUnit = spaceMatch[1]
-        }
-      }
+      let headIndentUnit = headContent.includes('\t') ? '\t' : (headContent.match(/\r?\n( +)\S/)?.[1] || '  ')
 
       const match = headContent.match(/\r?\n( {2,}|\t+)<(?!\/)[^>]+>[ \t]*\r?\n?/)
       const closingSpace = endMatch[1] || ''
-      let indentStr = match ? match[1] : `${closingSpace.replace(/\r?\n/, '')}${headIndentUnit}`
+
+      let indentStr = match?.[1] || ''
+      let newIndentClosingSpace = closingSpace
 
       // If the closing tag was completely inline, calculate indent from the start of its line
       if (!closingSpace) {
-        const line = headContent.split(/\r?\n/).find(l => l.includes('</>')) || ''
-        const leadingSpace = line.match(/^[ \t]*/)
-        // Use leading space + 1 indent level for the element, and the base leading space for the closing tag
-        indentStr = match ? match[1] : `${leadingSpace ? leadingSpace[0] : ''}${headIndentUnit}`
-
-        let newIndentClosingSpace = `${headEol}${leadingSpace ? leadingSpace[0] : ''}`
-        headContent = headContent.replace(/(\r?\n[ \t]*)?(<\/>)/, `${headEol}${indentStr}<link rel="manifest" href="/manifest.webmanifest" />${newIndentClosingSpace}$2`)
+        const leadingSpace = (headContent.split(/\r?\n/).find(l => l.includes('</>')) || '').match(/^[ \t]*/)?.[0] || ''
+        if (!indentStr) indentStr = `${leadingSpace}${headIndentUnit}`
+        newIndentClosingSpace = `${headEol}${leadingSpace}`
       } else {
-        headContent = headContent.replace(/(\r?\n[ \t]*)?(<\/>)/, `${headEol}${indentStr}<link rel="manifest" href="/manifest.webmanifest" />$1$2`)
+        if (!indentStr) indentStr = `${closingSpace.replace(/\r?\n/, '')}${headIndentUnit}`
       }
+
+      headContent = headContent.replace(/(\r?\n[ \t]*)?(<\/>)/, `${headEol}${indentStr}<link rel="manifest" href="/manifest.webmanifest" />${newIndentClosingSpace}$2`)
 
       writeFileSync(headPath, headContent, 'utf8')
       console.log(`✅ Updated ${headPath} to include manifest link`)
