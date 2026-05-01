@@ -9,7 +9,7 @@ import { createFolder, getPath, getPluginsData, getProjectRoot, getViteConfigPat
 let isTypescript: boolean
 let lang: Lang
 
-export default async function () {
+export default async function pwa() {
   const cwd = process.env.VITE_PATCHER_CWD || process.cwd()
   const viteConfigPath = getViteConfigPath(cwd)
   isTypescript = viteConfigPath.endsWith('.ts')
@@ -51,12 +51,14 @@ const patchViteConfig = async (viteConfigPath: string) => {
       rootAST = parse(lang, generatedCode).root()
     }
 
-    let { obj: targetObj, arr: pluginsArray } = getPluginsData(rootAST)
+    const pluginData = getPluginsData(rootAST)
 
+    const targetObj = pluginData.obj
     if (!targetObj) {
       throw new Error(`Could not find a valid Vite configuration object in ${viteConfigPath}; please fix it and retry`)
     }
 
+    let pluginsArray = pluginData.arr
     if (!pluginsArray) {
       const objStartPos = targetObj.range().start.index
       let objIndent = ''
