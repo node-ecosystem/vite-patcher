@@ -20,7 +20,10 @@ export default async function pwa() {
 
   const viteConfigCode = readFileSync(viteConfigPath, 'utf8')
 
-  quote = viteConfigCode.split("'").length >= viteConfigCode.split('"').length ? "'" : '"'
+  const singleQuotesCount = (viteConfigCode.match(/'/g) || []).length
+  const doubleQuotesCount = (viteConfigCode.match(/"/g) || []).length
+  quote = singleQuotesCount >= doubleQuotesCount ? "'" : '"'
+
   indent = viteConfigCode.includes('\t') ? '\t' : (viteConfigCode.match(/\r?\n( +)\S/)?.[1] || '  ')
   eol = viteConfigCode.includes('\r\n') ? '\r\n' : '\n'
 
