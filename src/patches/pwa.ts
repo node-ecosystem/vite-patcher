@@ -43,7 +43,8 @@ const patchViteConfig = async (viteConfigPath: string, viteConfigCode: string) =
     const imports = rootAST.findAll({ rule: { kind: 'import_statement' } })
     const hasPWAImport = viteConfigCode.includes('vite-plugin-pwa') && imports.some((imp) => {
       const sourceString = imp.children().find(c => c.kind() === 'string')?.text()
-      return sourceString === "'vite-plugin-pwa'" || sourceString === '"vite-plugin-pwa"'
+      const isPwaImport = sourceString === "'vite-plugin-pwa'" || sourceString === '"vite-plugin-pwa"'
+      return isPwaImport && imp.text().includes('VitePWA')
     })
     if (!hasPWAImport) {
       const vitePWAImport = `import { VitePWA } from ${quote}vite-plugin-pwa${quote}`
