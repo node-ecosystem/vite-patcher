@@ -6,7 +6,7 @@ import { parse, Lang } from '@ast-grep/napi'
 import type { SgNode } from '@ast-grep/napi'
 import type { Kinds, TypesMap } from '@ast-grep/napi/types/staticTypes'
 
-import { createFolder, getPath, getPluginsData, getViteConfigPath } from '../utils.ts'
+import { createFolder, getPath, getPluginsData, getViteConfigPath, isVikePluginUsed } from '../utils.ts'
 
 let isTypescript: boolean
 let rootAST: SgNode<TypesMap, Kinds<TypesMap>>
@@ -149,10 +149,8 @@ const patchVikeHeadManifest = async (cwd: string, viteConfigPath: string) => {
   const viteConfigCode = readFileSync(viteConfigPath, 'utf8')
   if (!rootAST) rootAST = parse(Lang.TypeScript, viteConfigCode).root()
 
-  // Check vike in vite.config dependencies (import statement = import vike from 'vike/plugin')
-  const isVikeImported = rootAST.find({ rule: { pattern: 'import $_ from \'vike/plugin\'' } })
-  if (!isVikeImported) {
-    console.warn(`⚠️ Vike not detected in package.json or vite.config dependencies. ${SKIP_MESSAGE}`)
+  if (!isVikePluginUsed(rootAST)) {
+    console.warn(`⚠️ Vike not detected in vite.config plugins. ${SKIP_MESSAGE}`)
     return
   }
 
