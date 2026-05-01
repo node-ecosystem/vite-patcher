@@ -165,26 +165,15 @@ const patchVikeHeadManifest = async (cwd: string, viteConfigPath: string) => {
     } else {
       const endMatch = headContent.match(/\n([ \t]*)(<\/>)/)
       if (!endMatch) {
-        console.warn(`⚠️ Could not patch ${headPath}. The file does not seem to contain a valid JSX Fragment closing tag (e.g., "</>"). Please add the manifest link manually.`)
+        console.warn(`⚠️ Could not patch ${headPath} because a closing JSX Fragment (</>) was not found. Please add the manifest link manually.`)
         return
       }
 
-      // Try to deduce the indentation from a sibling tag, if it exists.
-      let indentStr = ''
+      // Try to deduce the indentation from a sibling tag, or fallback to closing tag indentation + 1 level
       const match = headContent.match(/\n( {2,}|\t+)<(?!\/)[^>]+>[ \t]*\n?/)
-      if (match) {
-        // Ideal case: copy the indentation from an existing tag.
-        indentStr = match[1]
-      } else {
-        // Fallback case: create the indentation based on the closing tag position.
-        const closingTagIndent = endMatch[1]
-        const indentUnit = closingTagIndent.includes('\t') ? '\t' : '  '
-        indentStr = closingTagIndent + indentUnit
-      }
+      const indentStr = match ? match[1] : `${endMatch[1]}${endMatch[1].includes('\t') ? '\t' : '  '}`
 
-      // Perform the replacement using the calculated indentation.
       headContent = headContent.replace(/(\n)([ \t]*)(<\/>)/, `\n${indentStr}<link rel="manifest" href="/manifest.webmanifest" />$1$2$3`)
-
       writeFileSync(headPath, headContent, 'utf8')
       console.log(`✅ Updated ${headPath} to include manifest link`)
     }
