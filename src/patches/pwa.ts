@@ -7,11 +7,13 @@ import { parse, Lang } from '@ast-grep/napi'
 import { createFolder, getPath, getPluginsData, getProjectRoot, getViteConfigPath, isVikePluginUsed } from '../utils.ts'
 
 let isTypescript: boolean
+let lang: Lang
 
 export default async function () {
   const cwd = process.env.VITE_PATCHER_CWD || process.cwd()
   const viteConfigPath = getViteConfigPath(cwd)
   isTypescript = viteConfigPath.endsWith('.ts')
+  lang = isTypescript ? Lang.TypeScript : Lang.JavaScript
   await patchViteConfig(viteConfigPath)
   await patchVikeHeadManifest(cwd, viteConfigPath)
 }
@@ -24,7 +26,7 @@ const patchViteConfig = async (viteConfigPath: string) => {
 
     const eol = generatedCode.includes('\r\n') ? '\r\n' : '\n'
 
-    let rootAST = parse(Lang.TypeScript, generatedCode).root()
+    let rootAST = parse(lang, generatedCode).root()
 
     // Add import statement
     const imports = rootAST.findAll({ rule: { kind: 'import_statement' } })
@@ -38,7 +40,7 @@ const patchViteConfig = async (viteConfigPath: string) => {
       } else {
         generatedCode = `${vitePWAImport}${eol}${generatedCode}`
       }
-      rootAST = parse(Lang.TypeScript, generatedCode).root()
+      rootAST = parse(lang, generatedCode).root()
     }
 
     let { obj: targetObj, arr: pluginsArray } = getPluginsData(rootAST)
@@ -46,7 +48,7 @@ const patchViteConfig = async (viteConfigPath: string) => {
     if (targetObj && !pluginsArray) {
       const insertPos = targetObj.range().start.index + 1
       generatedCode = `${generatedCode.slice(0, insertPos)}${eol}  plugins: [],${generatedCode.slice(insertPos)}`
-      rootAST = parse(Lang.TypeScript, generatedCode).root()
+      rootAST = parse(lang, generatedCode).root()
       pluginsArray = getPluginsData(rootAST).arr!
     }
 
@@ -138,7 +140,7 @@ const patchVikeHeadManifest = async (cwd: string, viteConfigPath: string) => {
 
   // Parse vite.config to find vike plugins and root instead of executing it
   const viteConfigCode = readFileSync(viteConfigPath, 'utf8')
-  const rootAST = parse(Lang.TypeScript, viteConfigCode).root()
+  const rootAST = parse(lang, viteConfigCode).root()
 
   if (!isVikePluginUsed(rootAST)) {
     console.warn(`⚠️ ${SKIP_MESSAGE} Vike not detected in vite.config plugins`)
