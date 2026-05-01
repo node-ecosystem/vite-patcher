@@ -108,3 +108,22 @@ export const getProjectRoot = (rootAST: SgNode<TypesMap, Kinds<TypesMap>>, cwd: 
 
   return cwd
 }
+
+export const getTrivia = (code: string) => {
+  let singleQuotesCount = 0
+  let doubleQuotesCount = 0
+  for (const element of code) {
+    if (element === "'") singleQuotesCount++
+    else if (element === '"') doubleQuotesCount++
+  }
+
+  const quote = singleQuotesCount >= doubleQuotesCount ? "'" : '"'
+  const indent = code.includes('\t') ? '\t' : (code.match(/\r?\n( +)\S/)?.[1] || '  ')
+  const eol = code.includes('\r\n') ? '\r\n' : '\n'
+
+  return {
+    quote,
+    indent,
+    eol
+  }
+}

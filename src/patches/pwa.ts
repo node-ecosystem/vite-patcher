@@ -4,7 +4,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { parse, Lang } from '@ast-grep/napi'
 
-import { createFolder, getPath, getPluginsData, getProjectRoot, getViteConfigPath, isVikePluginUsed } from '../utils.ts'
+import { createFolder, getPath, getPluginsData, getProjectRoot, getTrivia, getViteConfigPath, isVikePluginUsed } from '../utils.ts'
 
 let isTypescript: boolean
 let lang: Lang
@@ -20,16 +20,7 @@ export default async function pwa() {
 
   const viteConfigCode = readFileSync(viteConfigPath, 'utf8')
 
-  let singleQuotesCount = 0
-  let doubleQuotesCount = 0
-  for (let i = 0; i < viteConfigCode.length; i++) {
-    if (viteConfigCode[i] === "'") singleQuotesCount++
-    else if (viteConfigCode[i] === '"') doubleQuotesCount++
-  }
-  quote = singleQuotesCount >= doubleQuotesCount ? "'" : '"'
-
-  indent = viteConfigCode.includes('\t') ? '\t' : (viteConfigCode.match(/\r?\n( +)\S/)?.[1] || '  ')
-  eol = viteConfigCode.includes('\r\n') ? '\r\n' : '\n'
+    ; ({ quote, indent, eol } = getTrivia(viteConfigCode))
 
   const viteConfigCodeUpdated = await patchViteConfig(viteConfigPath, viteConfigCode)
   await patchVikeHeadManifest(cwd, viteConfigCodeUpdated)
