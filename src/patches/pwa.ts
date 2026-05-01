@@ -149,11 +149,8 @@ const patchVikeHeadManifest = async (cwd: string, viteConfigPath: string) => {
   const viteConfigCode = readFileSync(viteConfigPath, 'utf8')
   if (!rootAST) rootAST = parse(Lang.TypeScript, viteConfigCode).root()
 
-  // Check vike in vite.config dependencies (import statement)
-  const isVikeImported = rootAST.find({ rule: { pattern: 'import $_ from \'vike/plugin\'' } }) ||
-    rootAST.find({ rule: { pattern: 'import { $_ } from \'vike/plugin\'' } }) ||
-    rootAST.findAll({ rule: { kind: 'import_statement' } }).some(n => n.text().includes('vike'))
-
+  // Check vike in vite.config dependencies (import statement = import vike from 'vike/plugin')
+  const isVikeImported = rootAST.find({ rule: { pattern: 'import $_ from \'vike/plugin\'' } })
   if (!isVikeImported) {
     console.warn(`⚠️ Vike not detected in package.json or vite.config dependencies. ${SKIP_MESSAGE}`)
     return
