@@ -277,4 +277,35 @@ export default defineConfig({
       await rm(tempDir, { recursive: true, force: true })
     }
   })
+
+  test('respects quoted root property correctly', async () => {
+    const initial = `import { defineConfig } from 'vite'
+import vike from 'vike/plugin'
+export default defineConfig({
+  "root": "src/app",
+  plugins: [vike()]
+})
+`
+    const tempDir = await mkdtemp(join(tmpdir(), 'vite-patcher-test-'))
+    try {
+      const configPath = join(tempDir, 'vite.config.ts')
+      await writeFile(configPath, initial, 'utf8')
+
+      const appPagesDir = join(tempDir, 'src/app', 'pages')
+      await mkdir(appPagesDir, { recursive: true })
+      await writeFile(join(appPagesDir, '+Head.tsx'), `export function Head() { return (\n  <>\n  </>\n) }`, 'utf8')
+
+      await writeFile(join(tempDir, 'package.json'), JSON.stringify({
+        dependencies: { vike: '^0.4.0' }
+      }), 'utf8')
+
+      await runScriptInDir(tempDir)
+
+      // Should patch +Head inside the quoted root directory
+      const updatedHead = await readFile(join(appPagesDir, '+Head.tsx'), 'utf8')
+      assert.ok(updatedHead.includes('manifest.webmanifest'), 'Should insert manifest into correct +Head location')
+    } finally {
+      await rm(tempDir, { recursive: true, force: true })
+    }
+  })
 })

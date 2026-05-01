@@ -80,13 +80,17 @@ export const getProjectRoot = (rootAST: SgNode<TypesMap, Kinds<TypesMap>>, cwd: 
 
   if (!rootPair) return cwd
 
-  const rootValNode = rootPair.children().find(c => c.kind() === 'string')
-  if (!rootValNode) return cwd
+  const rootValNode = rootPair.children().at(-1)
+  if (!rootValNode || rootValNode.kind() !== 'string') {
+    if (rootValNode) {
+      console.warn(`⚠️ Ignoring non-literal vite.config root (${rootValNode.text()}); using ${cwd} as project root`)
+    }
+    return cwd
+  }
 
   const rootVal = rootValNode.text()
   const match = rootVal.match(/^(['"`])(.*)\1$/s)
   if (match) return resolve(cwd, match[2])
 
-  console.warn(`⚠️ Ignoring non-literal vite.config root (${rootVal}); using ${cwd} as project root`)
   return cwd
 }
