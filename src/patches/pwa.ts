@@ -208,6 +208,7 @@ const patchVikeHeadManifest = async (cwd: string, viteConfigPath: string, viteCo
 
   // Check if +Head file exists in pages directory
   let headPath = getPath(join(projectRoot, 'pages'), '+Head', ['tsx', 'jsx'])
+  const linkManifest = `<link rel="manifest" href="/manifest.webmanifest" />`
   if (headPath) {
     // Add manifest link in +Head file if it doesn't exist
     let headContent = readFileSync(headPath, 'utf8')
@@ -237,7 +238,7 @@ const patchVikeHeadManifest = async (cwd: string, viteConfigPath: string, viteCo
       }
 
       const matchIndex = endMatch.index!
-      headContent = `${headContent.slice(0, matchIndex)}${eol}${indentStr}<link rel="manifest" href="/manifest.webmanifest" />${newIndentClosingSpace}${endMatch[2]}${headContent.slice(matchIndex + endMatch[0].length)}`
+      headContent = `${headContent.slice(0, matchIndex)}${eol}${indentStr}${linkManifest}${newIndentClosingSpace}${endMatch[2]}${headContent.slice(matchIndex + endMatch[0].length)}`
 
       writeFileSync(headPath, headContent, 'utf8')
       console.log(`✅ Updated ${headPath} to include manifest link`)
@@ -249,7 +250,7 @@ const patchVikeHeadManifest = async (cwd: string, viteConfigPath: string, viteCo
     const defaultHead = `export function Head() {
   return (
     <>
-      <link rel="manifest" href="/manifest.webmanifest" />
+      ${linkManifest}
     </>
   )
 }
