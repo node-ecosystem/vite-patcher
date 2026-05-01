@@ -200,7 +200,8 @@ const patchVikeHeadManifest = async (cwd: string, viteConfigPath: string) => {
       console.log(`ℹ️  ${SKIP_MESSAGE} ${headPath} already includes a manifest link`)
     } else {
       const headEol = headContent.includes('\r\n') ? '\r\n' : '\n'
-      const endMatch = headContent.match(/(\r?\n[ \t]*)?(<\/>)/)
+      const allMatches = [...headContent.matchAll(/(\r?\n[ \t]*)?(<\/>)/g)]
+      const endMatch = allMatches.at(-1)
       if (!endMatch) {
         console.warn(`⚠️ Could not patch ${headPath} because a closing JSX Fragment (</>) was not found. Please add the manifest link manually.`)
         return
@@ -223,7 +224,8 @@ const patchVikeHeadManifest = async (cwd: string, viteConfigPath: string) => {
         if (!indentStr) indentStr = `${closingSpace.replace(/\r?\n/, '')}${headIndentUnit}`
       }
 
-      headContent = headContent.replace(/(\r?\n[ \t]*)?(<\/>)/, `${headEol}${indentStr}<link rel="manifest" href="/manifest.webmanifest" />${newIndentClosingSpace}$2`)
+      const matchIndex = endMatch.index!
+      headContent = `${headContent.slice(0, matchIndex)}${headEol}${indentStr}<link rel="manifest" href="/manifest.webmanifest" />${newIndentClosingSpace}${endMatch[2]}${headContent.slice(matchIndex + endMatch[0].length)}`
 
       writeFileSync(headPath, headContent, 'utf8')
       console.log(`✅ Updated ${headPath} to include manifest link`)
