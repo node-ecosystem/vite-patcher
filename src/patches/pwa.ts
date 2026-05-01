@@ -30,14 +30,18 @@ const patchViteConfig = async (viteConfigPath: string) => {
     if (!rootAST) rootAST = parse(Lang.TypeScript, generatedCode).root()
 
     // Add import statement
-    if (!generatedCode.includes('vite-plugin-pwa')) {
+    const hasPWAImport = rootAST
+      .findAll({ rule: { kind: 'import_statement' } })
+      .some(imp => imp.text().includes('vite-plugin-pwa') && imp.text().includes('VitePWA'))
+    if (!hasPWAImport) {
       const imports = rootAST.findAll({ rule: { kind: 'import_statement' } })
+      const vitePWAImport = `import { VitePWA } from 'vite-plugin-pwa'`
       if (imports.length > 0) {
         const lastImport = imports.at(-1)!
         const pos = lastImport.range().end.index
-        generatedCode = `${generatedCode.slice(0, pos)}${eol}import { VitePWA } from 'vite-plugin-pwa'${generatedCode.slice(pos)}`
+        generatedCode = `${generatedCode.slice(0, pos)}${eol}${vitePWAImport}${generatedCode.slice(pos)}`
       } else {
-        generatedCode = `import { VitePWA } from 'vite-plugin-pwa'${eol}${generatedCode}`
+        generatedCode = `${vitePWAImport}${eol}${generatedCode}`
       }
       rootAST = parse(Lang.TypeScript, generatedCode).root()
     }
