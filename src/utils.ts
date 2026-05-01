@@ -34,19 +34,17 @@ export const getPluginsData = (rootAST: SgNode<TypesMap, Kinds<TypesMap>>) => {
     : exportedConfig?.find({ rule: { kind: 'object' } })
   if (!obj) return { obj: null, arr: null }
 
-  // Check if there's a "plugins" property
-  const existingPluginsProp = obj.find({
-    rule: {
-      any: [
-        { kind: 'property_identifier', regex: '^plugins$' },
-        { kind: 'string', regex: '^[\'"]plugins[\'"]$' }
-      ]
-    }
+  // Check top-level properties directly to avoid matching nested object properties
+  const pairs = obj.children().filter(c => c.kind() === 'pair')
+  const pluginsPair = pairs.find(p => {
+    const keyText = p.children()[0]?.text()
+    return keyText === 'plugins' || keyText === "'plugins'" || keyText === '"plugins"'
   })
-  if (!existingPluginsProp) return { obj, arr: null }
 
-  // If there's a "plugins" property, it must be an array literal; otherwise we can't safely patch it
-  const arr = existingPluginsProp.parent()?.find({ rule: { kind: 'array' } })
+  if (!pluginsPair) return { obj, arr: null }
+
+  // The value must be directly an array literal
+  const arr = pluginsPair.children().find(c => c.kind() === 'array')
   if (!arr) return { obj, arr: null, error: true }
 
   return { obj, arr }
@@ -74,18 +72,15 @@ export const getProjectRoot = (rootAST: SgNode<TypesMap, Kinds<TypesMap>>, cwd: 
   const { obj } = getPluginsData(rootAST)
   if (!obj) return cwd
 
-  const rootProp = obj.find({
-    rule: {
-      any: [
-        { kind: 'property_identifier', regex: '^root$' },
-        { kind: 'string', regex: '^[\'"]root[\'"]$' }
-      ]
-    }
+  const pairs = obj.children().filter(c => c.kind() === 'pair')
+  const rootPair = pairs.find(p => {
+    const keyText = p.children()[0]?.text()
+    return keyText === 'root' || keyText === "'root'" || keyText === '"root"'
   })
 
-  if (!rootProp) return cwd
+  if (!rootPair) return cwd
 
-  const rootValNode = rootProp.parent()?.children().find(c => c.kind() === 'string')
+  const rootValNode = rootPair.children().find(c => c.kind() === 'string')
   if (!rootValNode) return cwd
 
   const rootVal = rootValNode.text()

@@ -208,6 +208,36 @@ export default defineConfig({
     }
   })
 
+  test('does not match nested plugins or root properties', async () => {
+    const initial = `import { defineConfig } from 'vite'
+export default defineConfig({
+  server: {
+    plugins: [ 'wrong-array' ],
+    root: 'wrong-root'
+  }
+})
+`
+    const tempDir = await mkdtemp(join(tmpdir(), 'vite-patcher-test-'))
+    try {
+      const configPath = join(tempDir, 'vite.config.ts')
+      await writeFile(configPath, initial, 'utf8')
+
+      // Since there is no top-level plugins array, it should insert a new one
+      // at the top level
+      await runScriptInDir(tempDir)
+      const updatedConfig = await readFile(configPath, 'utf8')
+
+      // Should contain the new top-level plugins array with VitePWA
+      assert.ok(updatedConfig.includes('plugins: ['), 'Should create top-level plugins array')
+      assert.ok(updatedConfig.includes('VitePWA'), 'Should insert VitePWA')
+
+      // Should preserve the nested plugins array untouched
+      assert.ok(updatedConfig.includes("plugins: [ 'wrong-array' ]"), 'Should preserve nested plugins')
+    } finally {
+      await rm(tempDir, { recursive: true, force: true })
+    }
+  })
+
   test('throws if Vite configuration object is missing', async () => {
     const initial = `import { defineConfig } from 'vite'\n// Empty config`
     const tempDir = await mkdtemp(join(tmpdir(), 'vite-patcher-test-'))
