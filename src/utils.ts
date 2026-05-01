@@ -4,13 +4,11 @@ import type { SgNode } from '@ast-grep/napi'
 import type { Kinds, TypesMap } from '@ast-grep/napi/types/staticTypes'
 
 export const getPath = (basepath: string, filename: string, extensions = ['ts', 'js', 'mjs']) => {
-  const configFiles = extensions.map((ext) => `${filename}.${ext}`)
-  for (const file of configFiles) {
-    const fullPath = resolve(basepath, file)
-    if (existsSync(fullPath)) {
-      return fullPath
-    }
+  for (const ext of extensions) {
+    const fullPath = resolve(basepath, `${filename}.${ext}`)
+    if (existsSync(fullPath)) return fullPath
   }
+  return undefined
 }
 
 export const createFolder = (path: string) => {
@@ -36,31 +34,25 @@ export const getPluginsData = (rootAST: SgNode<TypesMap, Kinds<TypesMap>>) => {
 
 // Check vike in vite.config dependencies (import statement = import vike from 'vike/plugin')
 export const isVikePluginUsed = (rootAST: SgNode<TypesMap, Kinds<TypesMap>>) => {
-  let isVikePluginUsed = false
-  const vikeImportMatch = rootAST.find({ rule: { pattern: 'import $V from \'vike/plugin\'' } })
-  const vikeIdentifier = vikeImportMatch?.getMatch('V')?.text()
-  if (vikeIdentifier) {
-    const { arr: pluginsArr } = getPluginsData(rootAST)
-    if (pluginsArr) {
-      // Find a call_expression where the function name matches the vike identifier
-      const calls = pluginsArr.findAll({ rule: { kind: 'call_expression' } })
-      isVikePluginUsed = calls.some(call => {
-        const identifier = call.find({ rule: { kind: 'identifier' } })
-        return identifier?.text() === vikeIdentifier
-      })
-    }
-  }
-  return isVikePluginUsed
+  const vikeIdentifier = rootAST.find({ rule: { pattern: 'import $V from \'vike/plugin\'' } })?.getMatch('V')?.text()
+  if (!vikeIdentifier) return false
+
+  const { arr: pluginsArr } = getPluginsData(rootAST)
+  if (!pluginsArr) return false
+
+  return pluginsArr
+    .findAll({ rule: { kind: 'call_expression' } })
+    .some(call => call.find({ rule: { kind: 'identifier' } })?.text() === vikeIdentifier)
 }
 
 // Try to find vite config "root" property
 export const getProjectRoot = (rootAST: SgNode<TypesMap, Kinds<TypesMap>>, cwd: string) => {
   const rootVal = rootAST.find({ rule: { pattern: 'root: $ROOT' } })?.getMatch('ROOT')?.text()
-  if (rootVal) {
-    const match = rootVal.match(/^(['"`])(.*)\1$/s)
-    if (match) return resolve(cwd, match[2])
-    else console.warn(`⚠️ Ignoring non-literal vite.config root (${rootVal}); using ${cwd} as project root`)
-    return cwd
-  }
+  if (!rootVal) return cwd
+
+  const match = rootVal.match(/^(['"`])(.*)\1$/s)
+  if (match) return resolve(cwd, match[2])
+
+  console.warn(`⚠️ Ignoring non-literal vite.config root (${rootVal}); using ${cwd} as project root`)
   return cwd
 }
