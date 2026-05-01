@@ -13,7 +13,7 @@ let indent: string = '  '
 let eol: string
 
 export default async function pwa() {
-  const cwd = process.env.VITE_PATCHER_CWD || process.cwd()
+  const cwd = process.env?.VITE_PATCHER_CWD || process.cwd()
   const viteConfigPath = getViteConfigPath(cwd)
   isTypescript = viteConfigPath.endsWith('.ts')
   lang = isTypescript ? Lang.TypeScript : Lang.JavaScript
