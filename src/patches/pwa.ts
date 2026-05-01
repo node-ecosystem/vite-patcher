@@ -39,10 +39,10 @@ const patchViteConfig = async (viteConfigPath: string, viteConfigCode: string) =
     }
 
     // Add import statement
-    const imports = rootAST.findAll({ rule: { kind: 'import_statement' } })
-    const hasPWAImport = imports.some(imp => imp.text().includes('vite-plugin-pwa') && imp.text().includes('VitePWA'))
+    const hasPWAImport = viteConfigCode.includes('vite-plugin-pwa') && viteConfigCode.includes('VitePWA')
     if (!hasPWAImport) {
       const vitePWAImport = `import { VitePWA } from ${quote}vite-plugin-pwa${quote}`
+      const imports = rootAST.findAll({ rule: { kind: 'import_statement' } })
       if (imports.length > 0) {
         const lastImport = imports.at(-1)!
         const pos = lastImport.range().end.index
@@ -228,7 +228,8 @@ const patchVikeHeadManifest = async (cwd: string, viteConfigCode: string) => {
       if (closingSpace) {
         if (!indentStr) indentStr = `${closingSpace.replace(/\r?\n/, '')}${indent}`
       } else {
-        const leadingSpace = (headContent.split(/\r?\n/).find(l => l.includes('</>')) || '').match(/^[ \t]*/)?.[0] || ''
+        const leadingSpaceMatch = headContent.match(/^[ \t]*(?=.*<\/>)/m)
+        const leadingSpace = leadingSpaceMatch ? leadingSpaceMatch[0] : ''
         if (!indentStr) indentStr = `${leadingSpace}${indent}`
         newIndentClosingSpace = `${eol}${leadingSpace}`
       }
