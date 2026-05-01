@@ -28,6 +28,14 @@ const patchViteConfig = async (viteConfigPath: string) => {
 
     let rootAST = parse(lang, generatedCode).root()
 
+    const isAlreadyPatched = rootAST
+      .findAll({ rule: { kind: 'call_expression' } })
+      .some(call => call.find({ rule: { kind: 'identifier' } })?.text() === 'VitePWA')
+    if (isAlreadyPatched) {
+      console.log(`ℹ️  vite-plugin-pwa is already configured in ${viteConfigPath}`)
+      return
+    }
+
     // Add import statement
     const imports = rootAST.findAll({ rule: { kind: 'import_statement' } })
     const hasPWAImport = imports.some(imp => imp.text().includes('vite-plugin-pwa') && imp.text().includes('VitePWA'))
