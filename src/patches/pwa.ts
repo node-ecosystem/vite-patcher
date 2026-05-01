@@ -8,6 +8,9 @@ import { createFolder, getPath, getPluginsData, getProjectRoot, getViteConfigPat
 
 let isTypescript: boolean
 let lang: Lang
+let quote: string = "'"
+let indent: string = '  '
+let eol: string
 
 export default async function pwa() {
   const cwd = process.env.VITE_PATCHER_CWD || process.cwd()
@@ -15,19 +18,21 @@ export default async function pwa() {
   isTypescript = viteConfigPath.endsWith('.ts')
   lang = isTypescript ? Lang.TypeScript : Lang.JavaScript
 
-  await patchViteConfig(viteConfigPath)
+  const viteConfigCode = readFileSync(viteConfigPath, 'utf8')
+
+  quote = viteConfigCode.split("'").length >= viteConfigCode.split('"').length ? "'" : '"'
+  indent = viteConfigCode.includes('\t') ? '\t' : (viteConfigCode.match(/\r?\n( +)\S/)?.[1] || '  ')
+  eol = viteConfigCode.includes('\r\n') ? '\r\n' : '\n'
+
+  await patchViteConfig(viteConfigPath, viteConfigCode)
   await patchVikeHeadManifest(cwd, viteConfigPath)
 }
 
-const patchViteConfig = async (viteConfigPath: string) => {
+const patchViteConfig = async (viteConfigPath: string, viteConfigCode: string) => {
   console.log(`⏳ Patching file ${viteConfigPath} …`)
 
   try {
-    let generatedCode = readFileSync(viteConfigPath, 'utf8')
-
-    const eol = generatedCode.includes('\r\n') ? '\r\n' : '\n'
-
-    let rootAST = parse(lang, generatedCode).root()
+    let rootAST = parse(lang, viteConfigCode).root()
 
     const isAlreadyPatched = rootAST
       .findAll({ rule: { kind: 'call_expression' } })
@@ -41,15 +46,15 @@ const patchViteConfig = async (viteConfigPath: string) => {
     const imports = rootAST.findAll({ rule: { kind: 'import_statement' } })
     const hasPWAImport = imports.some(imp => imp.text().includes('vite-plugin-pwa') && imp.text().includes('VitePWA'))
     if (!hasPWAImport) {
-      const vitePWAImport = `import { VitePWA } from 'vite-plugin-pwa'`
+      const vitePWAImport = `import { VitePWA } from ${quote}vite-plugin-pwa${quote}`
       if (imports.length > 0) {
         const lastImport = imports.at(-1)!
         const pos = lastImport.range().end.index
-        generatedCode = `${generatedCode.slice(0, pos)}${eol}${vitePWAImport}${generatedCode.slice(pos)}`
+        viteConfigCode = `${viteConfigCode.slice(0, pos)}${eol}${vitePWAImport}${viteConfigCode.slice(pos)}`
       } else {
-        generatedCode = `${vitePWAImport}${eol}${generatedCode}`
+        viteConfigCode = `${vitePWAImport}${eol}${viteConfigCode}`
       }
-      rootAST = parse(lang, generatedCode).root()
+      rootAST = parse(lang, viteConfigCode).root()
     }
 
     const pluginData = getPluginsData(rootAST)
@@ -67,74 +72,68 @@ const patchViteConfig = async (viteConfigPath: string) => {
     if (!pluginsArray) {
       const objStartPos = targetObj.range().start.index
       let objIndent = ''
-      const objLineStart = generatedCode.lastIndexOf('\n', objStartPos)
+      const objLineStart = viteConfigCode.lastIndexOf('\n', objStartPos)
       if (objLineStart !== -1) {
-        const linePrefix = generatedCode.slice(objLineStart + 1, objStartPos)
+        const linePrefix = viteConfigCode.slice(objLineStart + 1, objStartPos)
         const indentMatch = linePrefix.match(/^[ \t]*/)
         if (indentMatch) objIndent = indentMatch[0]
       }
       // Determine basic indentation unit and add to object indentation for the new "plugins" property
-      let newPropIndent = `${objIndent}${generatedCode.includes('\t') ? '\t' : '  '}`
+      let newPropIndent = `${objIndent}${indent}`
 
       // If object has properties, try to copy the first property's indentation
       const firstProp = targetObj.children().find(c => c.kind() === 'pair')
       if (firstProp) {
         const propStartPos = firstProp.range().start.index
-        const propLineStart = generatedCode.lastIndexOf('\n', propStartPos)
+        const propLineStart = viteConfigCode.lastIndexOf('\n', propStartPos)
         if (propLineStart !== -1) {
-          const propIndentMatch = generatedCode.slice(propLineStart + 1, propStartPos).match(/^[ \t]*/)
+          const propIndentMatch = viteConfigCode.slice(propLineStart + 1, propStartPos).match(/^[ \t]*/)
           if (propIndentMatch) newPropIndent = propIndentMatch[0]
         }
       }
 
       const insertPos = objStartPos + 1
-      generatedCode = `${generatedCode.slice(0, insertPos)}${eol}${newPropIndent}plugins: [],${generatedCode.slice(insertPos)}`
-      rootAST = parse(lang, generatedCode).root()
+      viteConfigCode = `${viteConfigCode.slice(0, insertPos)}${eol}${newPropIndent}plugins: [],${viteConfigCode.slice(insertPos)}`
+      rootAST = parse(lang, viteConfigCode).root()
       pluginsArray = getPluginsData(rootAST).arr!
     }
 
     const pluginsPos = pluginsArray!.range().start.index // '[' pos
-    const pluginsLineStart = generatedCode.lastIndexOf('\n', pluginsPos)
+    const pluginsLineStart = viteConfigCode.lastIndexOf('\n', pluginsPos)
     let baseIndent = ''
     if (pluginsLineStart !== -1) {
-      const linePrefix = generatedCode.slice(pluginsLineStart + 1, pluginsPos)
+      const linePrefix = viteConfigCode.slice(pluginsLineStart + 1, pluginsPos)
       const indentMatch = linePrefix.match(/^[ \t]*/)
       if (indentMatch) {
         baseIndent = indentMatch[0]
       }
     }
 
-    // Determine indentation mode (tabs vs spaces)
-    let indentUnit = '  '
-    if (baseIndent.includes('\t')) indentUnit = '\t'
-    else if (baseIndent.includes(' ')) indentUnit = ' '.repeat(Math.max(2, baseIndent.length))
-    else if (generatedCode.includes('\t')) indentUnit = '\t'
-
-    const innerIndent = baseIndent + indentUnit
+    const innerIndent = baseIndent + indent
 
     // Generate our VitePWA code as a literal string to insert manually
-    const pluginCode = `...(process.env.NODE_ENV === 'production' ? [VitePWA({
-  registerType: 'autoUpdate',
-  devOptions: { type: 'module' },
+    const pluginCode = `...(process.env.NODE_ENV === ${quote}production${quote} ? [VitePWA({
+  registerType: ${quote}autoUpdate${quote},
+  devOptions: { type: ${quote}module${quote} },
   manifest: {
-    name: 'My App',
-    short_name: 'MyApp',
-    theme_color: '#3F51B5',
-    background_color: '#3367D6',
-    icons: [{ src: '/icons/logo-192.png', sizes: '192x192', type: 'image/png' }]
+    name: ${quote}My App${quote},
+    short_name: ${quote}MyApp${quote},
+    theme_color: ${quote}#3F51B5${quote},
+    background_color: ${quote}#3367D6${quote},
+    icons: [{ src: ${quote}/icons/logo-192.png${quote}, sizes: ${quote}192x192${quote}, type: ${quote}image/png${quote} }]
   }
 }).map((plugin) => ({
   ...plugin,
   // Prevent from generating registerSW.js inside /dist/server
   applyToEnvironment(environment${isTypescript ? ': { name: string }' : ''}) {
-    return environment.name === 'client'
+    return environment.name === ${quote}client${quote}
   }
 }))] : [])`
 
     // Extract raw code inside brackets
     const arrayEndPos = pluginsArray!.range().end.index - 1
-    let before = generatedCode.slice(0, arrayEndPos)
-    const after = generatedCode.slice(arrayEndPos)
+    let before = viteConfigCode.slice(0, arrayEndPos)
+    const after = viteConfigCode.slice(arrayEndPos)
 
     const arrChildren = pluginsArray!.children()
     let lastElemIndex = -1
@@ -159,20 +158,20 @@ const patchViteConfig = async (viteConfigPath: string) => {
         if (kind !== 'comment' && kind !== ']') break
       }
       if (!hasCommaAfterLastElem) {
-        before = `${generatedCode.slice(0, lastElemEnd)},${generatedCode.slice(lastElemEnd, arrayEndPos)}`
+        before = `${viteConfigCode.slice(0, lastElemEnd)},${viteConfigCode.slice(lastElemEnd, arrayEndPos)}`
       }
     }
 
     const formattedPluginCode = pluginCode.split('\n').map((line, idx) => {
       if (idx === 0) return `${innerIndent}${line}`
       // pluginCode is hardcoded to use 2 spaces per indentation level.
-      return innerIndent + line.replaceAll(/^(  )+/g, match => indentUnit.repeat(match.length / 2))
+      return innerIndent + line.replaceAll(/^(  )+/g, match => indent.repeat(match.length / 2))
     }).join(eol)
 
-    generatedCode = `${before.trimEnd()}${eol}${formattedPluginCode}${eol}${baseIndent}${after}`
+    viteConfigCode = `${before.trimEnd()}${eol}${formattedPluginCode}${eol}${baseIndent}${after}`
 
     // Save the patched file
-    writeFileSync(viteConfigPath, generatedCode)
+    writeFileSync(viteConfigPath, viteConfigCode, 'utf8')
 
     console.log('✅ vite-plugin-pwa added to vite.config')
   } catch (error) {
@@ -215,15 +214,12 @@ const patchVikeHeadManifest = async (cwd: string, viteConfigPath: string) => {
     if (headContent.includes('manifest.webmanifest')) {
       console.log(`ℹ️  ${SKIP_MESSAGE} ${headPath} already includes a manifest link`)
     } else {
-      const headEol = headContent.includes('\r\n') ? '\r\n' : '\n'
       const allMatches = [...headContent.matchAll(/(\r?\n[ \t]*)?(<\/>)/g)]
       const endMatch = allMatches.at(-1)
       if (!endMatch) {
         console.warn(`⚠️ Could not patch ${headPath} because a closing JSX Fragment (</>) was not found. Please add the manifest link manually.`)
         return
       }
-
-      const headIndentUnit = headContent.includes('\t') ? '\t' : (headContent.match(/\r?\n( +)\S/)?.[1] || '  ')
 
       const match = headContent.match(/\r?\n( {2,}|\t+)<(?!\/)[^>]+>[ \t]*\r?\n?/)
       const closingSpace = endMatch[1] || ''
@@ -233,15 +229,15 @@ const patchVikeHeadManifest = async (cwd: string, viteConfigPath: string) => {
 
       // If the closing tag was completely inline, calculate indent from the start of its line
       if (closingSpace) {
-        if (!indentStr) indentStr = `${closingSpace.replace(/\r?\n/, '')}${headIndentUnit}`
+        if (!indentStr) indentStr = `${closingSpace.replace(/\r?\n/, '')}${indent}`
       } else {
         const leadingSpace = (headContent.split(/\r?\n/).find(l => l.includes('</>')) || '').match(/^[ \t]*/)?.[0] || ''
-        if (!indentStr) indentStr = `${leadingSpace}${headIndentUnit}`
-        newIndentClosingSpace = `${headEol}${leadingSpace}`
+        if (!indentStr) indentStr = `${leadingSpace}${indent}`
+        newIndentClosingSpace = `${eol}${leadingSpace}`
       }
 
       const matchIndex = endMatch.index!
-      headContent = `${headContent.slice(0, matchIndex)}${headEol}${indentStr}<link rel="manifest" href="/manifest.webmanifest" />${newIndentClosingSpace}${endMatch[2]}${headContent.slice(matchIndex + endMatch[0].length)}`
+      headContent = `${headContent.slice(0, matchIndex)}${eol}${indentStr}<link rel="manifest" href="/manifest.webmanifest" />${newIndentClosingSpace}${endMatch[2]}${headContent.slice(matchIndex + endMatch[0].length)}`
 
       writeFileSync(headPath, headContent, 'utf8')
       console.log(`✅ Updated ${headPath} to include manifest link`)
