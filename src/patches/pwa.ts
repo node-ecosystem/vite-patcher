@@ -20,7 +20,7 @@ export default async function pwa() {
 
   const viteConfigCode = readFileSync(viteConfigPath, 'utf8')
 
-  ;({ quote, indent, eol } = getTrivia(viteConfigCode))
+    ; ({ quote, indent, eol } = getTrivia(viteConfigCode))
 
   const viteConfigCodeUpdated = await patchViteConfig(viteConfigPath, viteConfigCode)
   await patchVikeHeadManifest(cwd, viteConfigCodeUpdated)
