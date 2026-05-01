@@ -137,12 +137,20 @@ const patchViteConfig = async (viteConfigPath: string) => {
     const after = generatedCode.slice(arrayEndPos)
 
     const arrChildren = pluginsArray!.children()
-    const validChildren = arrChildren.filter(c => !['[', ']', ',', 'comment'].includes(c.kind() as string))
-    const lastElem = validChildren.length > 0 ? validChildren.at(-1) : null
+    const isNonElementChild = (kind: string) => ['[', ']', ',', 'comment'].includes(kind)
+    const lastElemIndex = arrChildren.reduce((lastIndex, child, index) => {
+      return isNonElementChild(child.kind() as string) ? lastIndex : index
+    }, -1)
+
+    const lastElem = lastElemIndex >= 0 ? arrChildren[lastElemIndex] : null
     if (lastElem) {
       const lastElemEnd = lastElem.range().end.index
-      const charAfterLastElem = generatedCode.slice(lastElemEnd, arrayEndPos).trim()
-      if (!charAfterLastElem.startsWith(',')) {
+      const hasCommaAfterLastElem = arrChildren.slice(lastElemIndex + 1).some((child) => {
+        const kind = child.kind() as string
+        if (kind === 'comment') return false
+        return kind === ','
+      })
+      if (!hasCommaAfterLastElem) {
         before = `${generatedCode.slice(0, lastElemEnd)},${generatedCode.slice(lastElemEnd, arrayEndPos)}`
       }
     }
