@@ -11,6 +11,7 @@ let isTypescript: boolean
 export default async function () {
   const cwd = process.env.VITE_PATCHER_CWD || process.cwd()
   const viteConfigPath = getViteConfigPath(cwd)
+  isTypescript = viteConfigPath.endsWith('.ts')
   await patchViteConfig(viteConfigPath)
   await patchVikeHeadManifest(cwd, viteConfigPath)
 }
@@ -77,7 +78,6 @@ const patchViteConfig = async (viteConfigPath: string) => {
       const innerIndent = baseIndent + indentUnit
 
       const startIndex = pluginsPos + 1
-      isTypescript = viteConfigPath.endsWith('.ts')
 
       // Generate our VitePWA code as a literal string to insert manually
       const pluginCode = `...(process.env.NODE_ENV === 'production' ? [VitePWA({
