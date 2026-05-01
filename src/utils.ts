@@ -34,7 +34,11 @@ export const getPluginsData = (rootAST: SgNode<TypesMap, Kinds<TypesMap>>) => {
 
 // Check vike in vite.config dependencies (import statement = import vike from 'vike/plugin')
 export const isVikePluginUsed = (rootAST: SgNode<TypesMap, Kinds<TypesMap>>) => {
-  const vikeIdentifier = rootAST.find({ rule: { pattern: 'import $V from \'vike/plugin\'' } })?.getMatch('V')?.text()
+  const imports = rootAST.findAll({ rule: { kind: 'import_statement' } })
+  const vikePluginImport = imports.find(imp => imp.text().includes('vike/plugin'))
+  if (!vikePluginImport) return false
+
+  const vikeIdentifier = vikePluginImport.find({ rule: { kind: 'identifier' } })?.text()
   if (!vikeIdentifier) return false
 
   const { arr: pluginsArr } = getPluginsData(rootAST)
