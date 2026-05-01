@@ -156,4 +156,72 @@ describe('pwa.ts patch script', () => {
       await rm(tempDir, { recursive: true, force: true })
     }
   })
+
+  test('handles idempotency (does not duplicate VitePWA if already inserted)', async () => {
+    const initial = `import { defineConfig } from 'vite'
+import { VitePWA } from 'vite-plugin-pwa'
+
+export default defineConfig({
+  plugins: [
+    ...(process.env.NODE_ENV === 'production' ? [VitePWA({
+      registerType: 'autoUpdate'
+    })] : [])
+  ]
+})
+`
+    const tempDir = await mkdtemp(join(tmpdir(), 'vite-patcher-test-'))
+    try {
+      const configPath = join(tempDir, 'vite.config.ts')
+      await writeFile(configPath, initial, 'utf8')
+
+      // Should run successfully without throwing
+      await runScriptInDir(tempDir)
+      const updatedConfig = await readFile(configPath, 'utf8')
+      const pwaMatches = updatedConfig.match(/VitePWA\(/g) || []
+
+      // Still only 1 call to VitePWA(
+      assert.equal(pwaMatches.length, 1, 'VitePWA should not be duplicated')
+    } finally {
+      await rm(tempDir, { recursive: true, force: true })
+    }
+  })
+
+  test('throws if plugins is not an array literal', async () => {
+    const initial = `import { defineConfig } from 'vite'
+const myPlugins = []
+export default defineConfig({
+  plugins: myPlugins
+})
+`
+    const tempDir = await mkdtemp(join(tmpdir(), 'vite-patcher-test-'))
+    try {
+      const configPath = join(tempDir, 'vite.config.ts')
+      await writeFile(configPath, initial, 'utf8')
+
+      await assert.rejects(
+        runScriptInDir(tempDir),
+        /The "plugins" property in .*vite\.config\.ts is not an array literal/,
+        'Should reject if plugins is not an array'
+      )
+    } finally {
+      await rm(tempDir, { recursive: true, force: true })
+    }
+  })
+
+  test('throws if Vite configuration object is missing', async () => {
+    const initial = `import { defineConfig } from 'vite'\n// Empty config`
+    const tempDir = await mkdtemp(join(tmpdir(), 'vite-patcher-test-'))
+    try {
+      const configPath = join(tempDir, 'vite.config.ts')
+      await writeFile(configPath, initial, 'utf8')
+
+      await assert.rejects(
+        runScriptInDir(tempDir),
+        /Could not find a valid Vite configuration object in .*vite\.config\.ts/,
+        'Should reject if no config object is found'
+      )
+    } finally {
+      await rm(tempDir, { recursive: true, force: true })
+    }
+  })
 })
