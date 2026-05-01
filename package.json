@@ -24,8 +24,10 @@
     "lint": "eslint src/**/*.ts",
     "od": "yarn outdated"
   },
+  "dependencies": {
+    "@ast-grep/napi": "^0.42.1"
+  },
   "devDependencies": {
-    "@ast-grep/napi": "^0.42.1",
     "@types/node": "^25.6.0",
     "@yarnpkg/sdks": "^3.2.3",
     "eslint": "^10.2.1",
