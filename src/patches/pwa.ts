@@ -4,7 +4,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { parse, Lang } from '@ast-grep/napi'
 
-import { createFolder, getPath, getViteConfigPath } from '../utils.ts'
+import { createFolder, getPath, getPluginsData, getViteConfigPath } from '../utils.ts'
 
 let isTypescript: boolean
 
@@ -39,24 +39,13 @@ const patchViteConfig = async (viteConfigPath: string) => {
       root = parse(Lang.TypeScript, generatedCode).root()
     }
 
-    // Find the configuration object literal
-    const exportDefault = root.find({ rule: { kind: 'export_statement' } })
-    const targetObj = exportDefault?.find({ rule: { kind: 'object' } }) || root.find({ rule: { kind: 'object' } })
+    let { obj: targetObj, arr: pluginsArray } = getPluginsData(root)
 
-    let pluginsArray
-    if (targetObj) {
-      const pIdentifier = targetObj.find({ rule: { kind: 'property_identifier', regex: '^plugins$' } })
-      pluginsArray = pIdentifier?.parent()?.find({ rule: { kind: 'array' } })
-
-      if (!pluginsArray) {
-        const insertPos = targetObj.range().start.index + 1
-        generatedCode = `${generatedCode.slice(0, insertPos)}${eol}  plugins: [],${generatedCode.slice(insertPos)}`
-        root = parse(Lang.TypeScript, generatedCode).root()
-
-        const newTargetObj = root.find({ rule: { kind: 'export_statement' } })?.find({ rule: { kind: 'object' } }) || root.find({ rule: { kind: 'object' } })
-        const newPIdentifier = newTargetObj?.find({ rule: { kind: 'property_identifier', regex: '^plugins$' } })
-        pluginsArray = newPIdentifier?.parent()?.find({ rule: { kind: 'array' } })
-      }
+    if (targetObj && !pluginsArray) {
+      const insertPos = targetObj.range().start.index + 1
+      generatedCode = `${generatedCode.slice(0, insertPos)}${eol}  plugins: [],${generatedCode.slice(insertPos)}`
+      root = parse(Lang.TypeScript, generatedCode).root()
+      pluginsArray = getPluginsData(root).arr
     }
 
     const pluginsPos = pluginsArray!.range().start.index // '[' pos

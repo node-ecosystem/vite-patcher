@@ -1,5 +1,7 @@
 import { existsSync, mkdirSync } from 'node:fs'
 import { resolve } from 'node:path'
+import type { SgNode } from '@ast-grep/napi'
+import type { Kinds, TypesMap } from '@ast-grep/napi/types/staticTypes'
 
 export const getPath = (basepath: string, filename: string, extensions = ['ts', 'js', 'mjs']) => {
   const configFiles = extensions.map((ext) => `${filename}.${ext}`)
@@ -23,4 +25,11 @@ export const getViteConfigPath = (basepath: string) => {
     throw new Error('❌ vite.config not found')
   }
   return targetPath
+}
+
+// Find the configuration object literal and its plugins array
+export const getPluginsData = (astRoot: SgNode<TypesMap, Kinds<TypesMap>>) => {
+  const obj = astRoot.find({ rule: { kind: 'export_statement' } })?.find({ rule: { kind: 'object' } }) || astRoot.find({ rule: { kind: 'object' } })
+  const arr = obj?.find({ rule: { kind: 'property_identifier', regex: '^plugins$' } })?.parent()?.find({ rule: { kind: 'array' } })
+  return { obj, arr }
 }
