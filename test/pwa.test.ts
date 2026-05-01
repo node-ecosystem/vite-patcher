@@ -85,6 +85,15 @@ describe('pwa.ts patch script', () => {
     ])
   })
 
+  test('patches correctly when using defineConfig with an arrow function (vite.config.ts)', async () => {
+    const initial = `import { defineConfig } from 'vite'\n\nexport default defineConfig((env) => ({\n  build: { outDir: 'dist' }\n}))\n`
+    await testConfig('vite.config.ts', initial, [
+      'vite-plugin-pwa',
+      'plugins: [',
+      'VitePWA'
+    ])
+  })
+
   test('patches correctly when plugins array already has items (inserted at the end)', async () => {
     const initial = `import { defineConfig } from 'vite'\nimport react from '@vitejs/plugin-react'\n\nexport default defineConfig({\n  plugins: [\n    react()\n  ]\n})\n`
     await testConfig('vite.config.ts', initial, [
