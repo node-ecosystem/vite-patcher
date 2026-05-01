@@ -59,6 +59,10 @@ const patchViteConfig = async (viteConfigPath: string) => {
       throw new Error(`Could not find a valid Vite configuration object in ${viteConfigPath}; please fix it and retry`)
     }
 
+    if (pluginData.error) {
+      throw new Error(`The "plugins" property in ${viteConfigPath} is not an array literal. Please add vite-plugin-pwa manually.`)
+    }
+
     let pluginsArray = pluginData.arr
     if (!pluginsArray) {
       const objStartPos = targetObj.range().start.index
