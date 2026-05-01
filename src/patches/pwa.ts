@@ -158,17 +158,13 @@ const patchVikeHeadManifest = async (cwd: string, viteConfigPath: string) => {
 
   // Try to find vite config "root" property
   let projectRoot = cwd
-  const rootProp = rootAST.find({ rule: { pattern: 'root: $ROOT' } })
-  if (rootProp) {
-    const rootValMatch = rootProp.getMatch('ROOT')?.text()
-    if (rootValMatch) {
-      const stringLiteralMatch = rootValMatch.match(/^(['"])(.*)\1$/s)
-      if (stringLiteralMatch) {
-        const strippedRoot = stringLiteralMatch[2]
-        projectRoot = resolve(cwd, strippedRoot)
-      } else {
-        console.warn(`⚠️ ${SKIP_MESSAGE} Ignoring non-literal vite.config root (${rootValMatch}); using ${cwd} as project root`)
-      }
+  const rootVal = rootAST.find({ rule: { pattern: 'root: $ROOT' } })?.getMatch('ROOT')?.text()
+  if (rootVal) {
+    const match = rootVal.match(/^(['"`])(.*)\1$/s)
+    if (match) {
+      projectRoot = resolve(cwd, match[2])
+    } else {
+      console.warn(`⚠️ Ignoring non-literal vite.config root (${rootVal}); using ${cwd} as project root`)
     }
   }
 
