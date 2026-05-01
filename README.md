@@ -14,7 +14,7 @@ Inject Vite Plugins and related configurations without any effort into your [vit
 
 | Command | Plugin | Description
 | - | - | -
-| `pwa` | [vite-plugin-pwa](https://www.npmjs.com/package/vite-plugin-pwa) | Add [Progressive Web App (PWA)](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps) support. *Supports [vike](https://www.npmjs.com/package/vike) as well.*
+| [pwa](/vite-patcher#pwa-patch) | [vite-plugin-pwa](https://www.npmjs.com/package/vite-plugin-pwa) | Add [Progressive Web App (PWA)](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps) support. *Supports [vike](https://www.npmjs.com/package/vike) as well.*
 
 ## ⚙️ Installation
 
@@ -30,7 +30,7 @@ Install exactly what you need for your local environment:
 
 Run the CLI tool directly to apply patches to your Vite configuration.
 
-### Apply the PWA patch
+### `pwa` patch
 
 Quickly inject `vite-plugin-pwa` into your existing `vite.config`:
 
