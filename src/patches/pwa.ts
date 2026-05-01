@@ -12,7 +12,7 @@ export default async function () {
   const cwd = process.env.VITE_PATCHER_CWD || process.cwd()
   const viteConfigPath = getViteConfigPath(cwd)
   await patchViteConfig(viteConfigPath)
-  await patchVikeHeadPage(cwd, viteConfigPath)
+  await patchVikeHeadManifest(cwd, viteConfigPath)
 }
 
 const patchViteConfig = async (viteConfigPath: string) => {
@@ -142,7 +142,7 @@ const patchViteConfig = async (viteConfigPath: string) => {
   }
 }
 
-const patchVikeHeadPage = async (cwd: string, viteConfigPath: string) => {
+const patchVikeHeadManifest = async (cwd: string, viteConfigPath: string) => {
   const SKIP_MESSAGE = 'Skipping "manifest" integration.'
   // Check if package.json exists
   const pkgPath = resolve(cwd, 'package.json')
