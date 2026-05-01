@@ -163,17 +163,31 @@ const patchVikeHeadManifest = async (cwd: string, viteConfigPath: string) => {
     if (headContent.includes('manifest.webmanifest')) {
       console.log(`ℹ️  ${SKIP_MESSAGE} ${headPath} already includes a manifest link`)
     } else {
-      // Intelligently infer indentation from previous tags inside the fragment
-      const match = headContent.match(/\n( {2,}|\t+)<(?!\/)[^>]+>[ \t]*\n?/)
       const endMatch = headContent.match(/\n([ \t]*)(<\/>)/)
-
-      if (endMatch) {
-        const indentStr = match && match[1] ? match[1] : `${endMatch[1]}${endMatch[1].includes('\t') ? '\t' : '  '}`
-        headContent = headContent.replace(/(\n)([ \t]*)(<\/>)/, `\n${indentStr}<link rel="manifest" href="/manifest.webmanifest" />$1$2$3`)
-
-        writeFileSync(headPath, headContent, 'utf8')
-        console.log(`✅ Updated ${headPath} to include manifest link`)
+      if (!endMatch) {
+        console.warn(`⚠️ Could not patch ${headPath}. The file does not seem to contain a valid JSX Fragment closing tag (e.g., "</>"). Please add the manifest link manually.`)
+        return
       }
+
+      let indentStr = ''
+
+      // Try to deduce the indentation from a sibling tag, if it exists.
+      const match = headContent.match(/\n( {2,}|\t+)<(?!\/)[^>]+>[ \t]*\n?/)
+      if (match) {
+        // Ideal case: copy the indentation from an existing tag.
+        indentStr = match[1]
+      } else {
+        // Fallback case: create the indentation based on the closing tag position.
+        const closingTagIndent = endMatch[1]
+        const indentUnit = closingTagIndent.includes('\t') ? '\t' : '  '
+        indentStr = closingTagIndent + indentUnit
+      }
+
+      // Perform the replacement using the calculated indentation.
+      headContent = headContent.replace(/(\n)([ \t]*)(<\/>)/, `\n${indentStr}<link rel="manifest" href="/manifest.webmanifest" />$1$2$3`)
+
+      writeFileSync(headPath, headContent, 'utf8')
+      console.log(`✅ Updated ${headPath} to include manifest link`)
     }
   } else {
     const pagesDir = join(projectRoot, 'pages')
