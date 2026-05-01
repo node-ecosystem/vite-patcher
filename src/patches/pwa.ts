@@ -169,9 +169,8 @@ const patchVikeHeadManifest = async (cwd: string, viteConfigPath: string) => {
         return
       }
 
-      let indentStr = ''
-
       // Try to deduce the indentation from a sibling tag, if it exists.
+      let indentStr = ''
       const match = headContent.match(/\n( {2,}|\t+)<(?!\/)[^>]+>[ \t]*\n?/)
       if (match) {
         // Ideal case: copy the indentation from an existing tag.
