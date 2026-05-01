@@ -50,8 +50,30 @@ const patchViteConfig = async (viteConfigPath: string) => {
     }
 
     if (!pluginsArray) {
-      const insertPos = targetObj.range().start.index + 1
-      generatedCode = `${generatedCode.slice(0, insertPos)}${eol}  plugins: [],${generatedCode.slice(insertPos)}`
+      const objStartPos = targetObj.range().start.index
+      let objIndent = ''
+      const objLineStart = generatedCode.lastIndexOf('\n', objStartPos)
+      if (objLineStart !== -1) {
+        const linePrefix = generatedCode.slice(objLineStart + 1, objStartPos)
+        const indentMatch = linePrefix.match(/^[ \t]*/)
+        if (indentMatch) objIndent = indentMatch[0]
+      }
+      // Determine basic indentation unit and add to object indentation for the new "plugins" property
+      let newPropIndent = `${objIndent}${generatedCode.includes('\t') ? '\t' : '  '}`
+
+      // If object has properties, try to copy the first property's indentation
+      const firstProp = targetObj.children().find(c => c.kind() === 'pair')
+      if (firstProp) {
+        const propStartPos = firstProp.range().start.index
+        const propLineStart = generatedCode.lastIndexOf('\n', propStartPos)
+        if (propLineStart !== -1) {
+          const propIndentMatch = generatedCode.slice(propLineStart + 1, propStartPos).match(/^[ \t]*/)
+          if (propIndentMatch) newPropIndent = propIndentMatch[0]
+        }
+      }
+
+      const insertPos = objStartPos + 1
+      generatedCode = `${generatedCode.slice(0, insertPos)}${eol}${newPropIndent}plugins: [],${generatedCode.slice(insertPos)}`
       rootAST = parse(lang, generatedCode).root()
       pluginsArray = getPluginsData(rootAST).arr!
     }
