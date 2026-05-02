@@ -1,4 +1,4 @@
-import pwa from './pwa.ts'
+import pwa from './pwa/index.ts'
 
 export default {
   pwa

@@ -14,7 +14,7 @@ Inject Vite Plugins and related configurations without any effort into your [vit
 
 | Command | Plugin | Description
 | - | - | -
-| [pwa](#pwa-patch) | [vite-plugin-pwa](https://www.npmjs.com/package/vite-plugin-pwa) | Add [Progressive Web App (PWA)](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps) support. *Supports [vike](https://www.npmjs.com/package/vike) as well.*
+| [pwa](./src/patches/pwa/README.md) | [vite-plugin-pwa](https://www.npmjs.com/package/vite-plugin-pwa) | Add [Progressive Web App (PWA)](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps) support. *Supports [vike](https://www.npmjs.com/package/vike) as well.*
 
 ## ⚙️ Installation
 
@@ -29,24 +29,6 @@ Install exactly what you need for your local environment:
 ## 📖 Usage
 
 Run the CLI tool directly to apply patches to your Vite configuration.
-
-### `pwa` patch
-
-Quickly inject `vite-plugin-pwa` into your existing `vite.config`:
-
-| Package Manager | Command
-| - | -
-| **npm** | `npm run vite-patcher pwa`
-| **yarn** | `yarn vite-patcher pwa`
-| **pnpm** | `pnpm vite-patcher pwa`
-
-Or execute via your package runner without installing as a permanent dependency (using `npx`/`dlx`):
-
-| Package Manager | Command
-| - | -
-| **npm** | `npx vite-patcher pwa`
-| **yarn** | `yarn dlx vite-patcher pwa`
-| **pnpm** | `pnpm dlx vite-patcher pwa`
 
 ## 🌍 Environment Variables
 
