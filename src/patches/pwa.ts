@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
-import { join, resolve } from 'node:path'
+import { join } from 'node:path'
 import { parse, Lang } from '@ast-grep/napi'
 
 import { createFolder, getPath, getPluginsData, getProjectRoot, getTrivia, getViteConfigPath, isVikePluginUsed } from '../utils.ts'
@@ -185,7 +185,7 @@ const patchViteConfig = async (viteConfigPath: string, viteConfigCode: string) =
 const patchVikeHeadManifest = async (cwd: string, viteConfigCode: string) => {
   const SKIP_MESSAGE = 'Skipping "manifest" integration:'
   // Check if package.json exists
-  const pkgPath = resolve(cwd, 'package.json')
+  const pkgPath = join(cwd, 'package.json')
   if (!existsSync(pkgPath)) {
     console.warn(`⚠️ ${SKIP_MESSAGE} Could not find package.json in ${cwd}`)
     return
