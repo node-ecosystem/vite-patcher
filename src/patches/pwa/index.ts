@@ -2,33 +2,29 @@
 
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { parse, Lang } from '@ast-grep/napi'
+import { parse } from '@ast-grep/napi'
 
 import { installVitePlugin } from '../packageManager.ts'
 import { createFolder, getPath, getPluginsData, getProjectRoot, getTrivia, getViteConfigPath, isVikePluginUsed } from '../utils.ts'
 
-let isTypescript: boolean
-let lang: Lang
-let quote: string = "'"
-let indent: string = '  '
-let eol: string
-
 export default async function pwa() {
   const cwd = process.env.VITE_PATCHER_CWD || process.cwd()
   const viteConfigPath = getViteConfigPath(cwd)
-  isTypescript = viteConfigPath.endsWith('.ts')
-  lang = isTypescript ? Lang.TypeScript : Lang.JavaScript
 
   const viteConfigCode = readFileSync(viteConfigPath, 'utf8')
 
-    ; ({ quote, indent, eol } = getTrivia(viteConfigCode))
+  const trivia = getTrivia(viteConfigPath, viteConfigCode)
 
   await installVitePlugin('vite-plugin-pwa')
-  const viteConfigCodeUpdated = await patchViteConfig(viteConfigPath, viteConfigCode)
-  await patchVikeHeadManifest(cwd, viteConfigCodeUpdated)
+  const viteConfigCodeUpdated = await patchViteConfig(trivia, viteConfigPath, viteConfigCode)
+  await patchVikeHeadManifest(trivia, cwd, viteConfigCodeUpdated)
 }
 
-const patchViteConfig = async (viteConfigPath: string, viteConfigCode: string) => {
+const patchViteConfig = async (
+  { quote, indent, eol, lang, isTypescript }: Trivia,
+  viteConfigPath: string,
+  viteConfigCode: string
+) => {
   console.log(`⏳ Patching file ${viteConfigPath} …`)
 
   try {
@@ -184,7 +180,11 @@ const patchViteConfig = async (viteConfigPath: string, viteConfigCode: string) =
   }
 }
 
-const patchVikeHeadManifest = async (cwd: string, viteConfigCode: string) => {
+const patchVikeHeadManifest = async (
+  { indent, eol, lang, isTypescript }: Trivia,
+  cwd: string,
+  viteConfigCode: string
+) => {
   const SKIP_MESSAGE = 'Skipping "manifest" integration:'
   // Check if package.json exists
   const pkgPath = join(cwd, 'package.json')

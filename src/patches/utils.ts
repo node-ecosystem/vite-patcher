@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync } from 'node:fs'
 import { join } from 'node:path'
-import type { SgNode } from '@ast-grep/napi'
+import { type SgNode, Lang } from '@ast-grep/napi'
 import type { Kinds, TypesMap } from '@ast-grep/napi/types/staticTypes'
 
 export const getPath = (basepath: string, filename: string, extensions = ['ts', 'js', 'mjs']) => {
@@ -113,7 +113,7 @@ export const getProjectRoot = (rootAST: SgNode<TypesMap, Kinds<TypesMap>>, cwd: 
   return cwd
 }
 
-export const getTrivia = (code: string) => {
+export const getTrivia = (path: string, code: string): Trivia => {
   let singleQuotesCount = 0
   let doubleQuotesCount = 0
   for (const char of code) {
@@ -124,10 +124,14 @@ export const getTrivia = (code: string) => {
   const quote = singleQuotesCount >= doubleQuotesCount ? "'" : '"'
   const indent = code.includes('\t') ? '\t' : (code.match(/\r?\n( +)\S/)?.[1] || '  ')
   const eol = code.includes('\r\n') ? '\r\n' : '\n'
+  const isTypescript = path.endsWith('.ts')
+  const lang = isTypescript ? Lang.TypeScript : Lang.JavaScript
 
   return {
     quote,
     indent,
-    eol
+    eol,
+    lang,
+    isTypescript
   }
 }
