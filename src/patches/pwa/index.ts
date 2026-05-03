@@ -4,6 +4,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { parse, Lang } from '@ast-grep/napi'
 
+import { installVitePlugin } from '../packageManager.ts'
 import { createFolder, getPath, getPluginsData, getProjectRoot, getTrivia, getViteConfigPath, isVikePluginUsed } from '../../utils.ts'
 
 let isTypescript: boolean
@@ -22,6 +23,7 @@ export default async function pwa() {
 
     ; ({ quote, indent, eol } = getTrivia(viteConfigCode))
 
+  await installVitePlugin('vite-plugin-pwa')
   const viteConfigCodeUpdated = await patchViteConfig(viteConfigPath, viteConfigCode)
   await patchVikeHeadManifest(cwd, viteConfigCodeUpdated)
 }
