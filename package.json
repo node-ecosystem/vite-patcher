@@ -7,7 +7,9 @@
     "vite",
     "patch",
     "patches",
-    "pwa"
+    "pwa",
+    "vercel",
+    "hono"
   ],
   "repository": {
     "type": "git",
