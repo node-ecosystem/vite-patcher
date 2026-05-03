@@ -108,27 +108,6 @@ const patchViteConfig = async (
       }
     }
 
-    const innerIndent = baseIndent + indent
-
-    // Generate our VitePWA code as a literal string to insert manually
-    const pluginCode = `...(process.env.NODE_ENV === ${quote}production${quote} ? [VitePWA({
-  registerType: ${quote}autoUpdate${quote},
-  devOptions: { type: ${quote}module${quote} },
-  manifest: {
-    name: ${quote}My App${quote},
-    short_name: ${quote}MyApp${quote},
-    theme_color: ${quote}#3F51B5${quote},
-    background_color: ${quote}#3367D6${quote},
-    icons: [{ src: ${quote}/icons/logo-192.png${quote}, sizes: ${quote}192x192${quote}, type: ${quote}image/png${quote} }]
-  }
-}).map((plugin) => ({
-  ...plugin,
-  // Prevent from generating registerSW.js inside /dist/server
-  applyToEnvironment(environment${isTypescript ? ': { name: string }' : ''}) {
-    return environment.name === ${quote}client${quote}
-  }
-}))] : [])`
-
     // Extract raw code inside brackets
     const arrayEndPos = pluginsArray!.range().end.index - 1
     let before = viteConfigCode.slice(0, arrayEndPos)
@@ -161,13 +140,26 @@ const patchViteConfig = async (
       }
     }
 
-    const formattedPluginCode = pluginCode.split('\n').map((line, idx) => {
-      if (idx === 0) return `${innerIndent}${line}`
-      // pluginCode is hardcoded to use 2 spaces per indentation level.
-      return innerIndent + line.replaceAll(/^(  )+/g, match => indent.repeat(match.length / 2))
-    }).join(eol)
+    // Generate our VitePWA code as a literal string to insert manually
+    const pluginCode = `${baseIndent}...(process.env.NODE_ENV === ${quote}production${quote} ? [VitePWA({${eol}`
+      + `${baseIndent}${indent}${indent}registerType: ${quote}autoUpdate${quote},${eol}`
+      + `${baseIndent}${indent}${indent}devOptions: { type: ${quote}module${quote} },${eol}`
+      + `${baseIndent}${indent}${indent}manifest: {${eol}`
+      + `${baseIndent}${indent}${indent}${indent}name: ${quote}My App${quote},${eol}`
+      + `${baseIndent}${indent}${indent}${indent}short_name: ${quote}MyApp${quote},${eol}`
+      + `${baseIndent}${indent}${indent}${indent}theme_color: ${quote}#3F51B5${quote},${eol}`
+      + `${baseIndent}${indent}${indent}${indent}background_color: ${quote}#3367D6${quote},${eol}`
+      + `${baseIndent}${indent}${indent}${indent}icons: [{ src: ${quote}/icons/logo-192.png${quote}, sizes: ${quote}192x192${quote}, type: ${quote}image/png${quote} }]${eol}`
+      + `${baseIndent}${indent}${indent}}${eol}`
+      + `${baseIndent}${indent}}).map((plugin) => ({${eol}`
+      + `${baseIndent}${indent}${indent}...plugin,${eol}`
+      + `${baseIndent}${indent}${indent}// Prevent from generating registerSW.js inside /dist/server${eol}`
+      + `${baseIndent}${indent}${indent}applyToEnvironment(environment${isTypescript ? ': { name: string }' : ''}) {${eol}`
+      + `${baseIndent}${indent}${indent}${indent}return environment.name === ${quote}client${quote}${eol}`
+      + `${baseIndent}${indent}${indent}}${eol}`
+      + `${baseIndent}${indent}}))] : [])${eol}`
 
-    viteConfigCode = `${before.trimEnd()}${eol}${formattedPluginCode}${eol}${baseIndent}${after}`
+    viteConfigCode = `${before}${pluginCode}${baseIndent}${after}`
 
     // Save the patched file
     writeFileSync(viteConfigPath, viteConfigCode, 'utf8')
@@ -250,15 +242,17 @@ const patchVikeHeadManifest = async (
   } else {
     const pagesDir = join(projectRoot, 'pages')
     createFolder(pagesDir)
+
     headPath = join(pagesDir, `+Head.${isTypescript ? 'tsx' : 'jsx'}`)
-    const defaultHead = `export function Head() {
-  return (
-    <>
-      ${linkManifest}
-    </>
-  )
-}
-`
+
+    const defaultHead = `export function Head() {${eol}`
+      + `${indent}return (${eol}`
+      + `${indent}${indent}<>${eol}`
+      + `${indent}${indent}${indent}${linkManifest}${eol}`
+      + `${indent}${indent}</>${eol}`
+      + `${indent})${eol}`
+      + `}${eol}`
+
     writeFileSync(headPath, defaultHead, 'utf8')
     console.log(`✅ Created ${headPath} with manifest link`)
   }
