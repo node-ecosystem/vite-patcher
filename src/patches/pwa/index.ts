@@ -5,7 +5,7 @@ import { join } from 'node:path'
 import { parse, Lang } from '@ast-grep/napi'
 
 import { installVitePlugin } from '../packageManager.ts'
-import { createFolder, getPath, getPluginsData, getProjectRoot, getTrivia, getViteConfigPath, isVikePluginUsed } from '../../utils.ts'
+import { createFolder, getPath, getPluginsData, getProjectRoot, getTrivia, getViteConfigPath, isVikePluginUsed } from '../utils.ts'
 
 let isTypescript: boolean
 let lang: Lang
