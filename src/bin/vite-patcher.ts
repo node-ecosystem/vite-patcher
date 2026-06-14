@@ -9,13 +9,11 @@ const patchFunction = patches[command as keyof typeof patches]
 if (patchFunction) {
   try {
     await patchFunction()
-    process.exit(0)
   } catch (error) {
     console.error(`❌ Error during the execution of the command: "vite-patcher ${command}"`, error)
-    process.exit(1)
+    process.exitCode = 1
   }
 } else {
   console.warn(`⚠️ Supported commands: "vite-patcher ${Object.keys(patches).join(', ')}"`)
-  process.exit(1)
+  process.exitCode = 1
 }
-

@@ -1,8 +1,7 @@
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
-import { createFolder, getProjectRoot, getTrivia, getViteConfigPath } from '../utils.ts'
-import { parse } from '@ast-grep/napi'
+import { createFolder, getTrivia, getViteConfigPath } from '../utils.ts'
 
 export default async function vikeVercel() {
   const cwd = process.env.VITE_PATCHER_CWD || process.cwd()
@@ -12,10 +11,10 @@ export default async function vikeVercel() {
 
   const trivia = getTrivia(viteConfigPath, viteConfigCode)
 
-  patchVercel(trivia, cwd, viteConfigCode)
+  patchVercel(trivia, cwd)
 }
 
-const patchVercel = ({ indent, eol, quote, lang }: Trivia, cwd: string, viteConfigCode: string) => {
+const patchVercel = ({ indent, eol, quote }: Trivia, cwd: string) => {
   // Create vercel.json file with default configuration
   const vercelJsonCode = `{${eol}`
     + `${indent}"outputDirectory": "dist/client",${eol}`
@@ -44,6 +43,6 @@ const patchVercel = ({ indent, eol, quote, lang }: Trivia, cwd: string, viteConf
 
   // TODO
   // Parse vite.config to find vike plugins and root instead of executing it
-  // const rootAST = parse(lang, viteConfigCode).root()
+  // const rootAST = await parseRoot(lang, viteConfigCode)
   // const projectRoot = getProjectRoot(rootAST, cwd)
 }

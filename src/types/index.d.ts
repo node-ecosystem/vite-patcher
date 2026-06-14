@@ -2,6 +2,6 @@ type Trivia = {
   quote: '"' | "'"
   indent: string
   eol: string
-  lang: 'JavaScript' | 'TypeScript'
+  lang: 'javascript' | 'typescript'
   isTypescript: boolean
 }

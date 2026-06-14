@@ -1,7 +1,6 @@
 import { existsSync, mkdirSync } from 'node:fs'
 import { join } from 'node:path'
-import { type SgNode, Lang } from '@ast-grep/napi'
-import type { Kinds, TypesMap } from '@ast-grep/napi/types/staticTypes'
+import { findAll, getCallFunctionName, getDefaultExportValue, Lang, type SyntaxNode } from './codegraft.ts'
 
 export const getPath = (basepath: string, filename: string, extensions = ['ts', 'js', 'mjs']) => {
   for (const ext of extensions) {
@@ -27,24 +26,27 @@ export const getViteConfigPath = (basepath: string) => {
 
 // Find the exported configuration object literal and its plugins array.
 // Do not fall back to the first object literal in the file, as that may be unrelated.
-export const getPluginsData = (rootAST: SgNode<TypesMap, Kinds<TypesMap>>) => {
-  const exportedConfig = rootAST.find({ rule: { pattern: 'export default $CONFIG' } })?.getMatch('CONFIG')
-  const obj = exportedConfig?.kind() === 'object'
-    ? exportedConfig
-    : exportedConfig?.find({ rule: { kind: 'object' } })
+export const getPluginsData = (rootAST: SyntaxNode) => {
+  const exportedConfig = getDefaultExportValue(rootAST)
+  let obj: SyntaxNode | null | undefined = null
+  if (exportedConfig?.type === 'object') {
+    obj = exportedConfig
+  } else if (exportedConfig) {
+    obj = findAll(exportedConfig, 'object').at(0)
+  }
   if (!obj) return { obj: null, arr: null }
 
   // Check top-level properties directly to avoid matching nested object properties
-  let pluginsPair: SgNode<TypesMap, Kinds<TypesMap>> | null = null
-  const children = obj.children()
+  let pluginsPair: SyntaxNode | null = null
+  const children = obj.children
   for (let i = children.length - 1; i >= 0; i--) {
     const c = children[i]
-    const kind = c.kind()
-    if (kind === 'shorthand_property_identifier' && c.text() === 'plugins') {
+    const kind = c.type
+    if (kind === 'shorthand_property_identifier' && c.text === 'plugins') {
       return { obj, arr: null, error: true }
     }
     if (kind === 'pair') {
-      const keyText = c.children()[0]?.text()
+      const keyText = c.children[0]?.text
       if (keyText === 'plugins' || keyText === "'plugins'" || keyText === '"plugins"') {
         pluginsPair = c
         break
@@ -55,40 +57,39 @@ export const getPluginsData = (rootAST: SgNode<TypesMap, Kinds<TypesMap>>) => {
   if (!pluginsPair) return { obj, arr: null }
 
   // The value must be directly an array literal
-  const arr = pluginsPair.children().find(c => c.kind() === 'array')
+  const arr = pluginsPair.children.find(c => c.type === 'array')
   if (!arr) return { obj, arr: null, error: true }
 
   return { obj, arr }
 }
 
 // Check vike in vite.config dependencies (import statement = import vike from 'vike/plugin')
-export const isVikePluginUsed = (rootAST: SgNode<TypesMap, Kinds<TypesMap>>) => {
-  const imports = rootAST.findAll({ rule: { kind: 'import_statement' } })
-  const vikePluginImport = imports.find(imp => imp.text().includes('vike/plugin'))
+export const isVikePluginUsed = (rootAST: SyntaxNode) => {
+  const imports = findAll(rootAST, 'import_statement')
+  const vikePluginImport = imports.find(imp => imp.text.includes('vike/plugin'))
   if (!vikePluginImport) return false
 
-  const vikeIdentifier = vikePluginImport.find({ rule: { kind: 'identifier' } })?.text()
+  const vikeIdentifier = findAll(vikePluginImport, 'identifier').at(0)?.text
   if (!vikeIdentifier) return false
 
   const { arr: pluginsArr } = getPluginsData(rootAST)
   if (!pluginsArr) return false
 
-  return pluginsArr
-    .findAll({ rule: { kind: 'call_expression' } })
-    .some(call => call.find({ rule: { kind: 'identifier' } })?.text() === vikeIdentifier)
+  return findAll(pluginsArr, 'call_expression')
+    .some(call => getCallFunctionName(call) === vikeIdentifier)
 }
 
 // Try to find vite config "root" property
-export const getProjectRoot = (rootAST: SgNode<TypesMap, Kinds<TypesMap>>, cwd: string) => {
+export const getProjectRoot = (rootAST: SyntaxNode, cwd: string) => {
   const { obj } = getPluginsData(rootAST)
   if (!obj) return cwd
 
-  let rootPair: SgNode<TypesMap, Kinds<TypesMap>> | null = null
-  const children = obj.children()
+  let rootPair: SyntaxNode | null = null
+  const children = obj.children
   for (let i = children.length - 1; i >= 0; i--) {
     const c = children[i]
-    if (c.kind() === 'pair') {
-      const keyText = c.children()[0]?.text()
+    if (c.type === 'pair') {
+      const keyText = c.children[0]?.text
       if (keyText === 'root' || keyText === "'root'" || keyText === '"root"') {
         rootPair = c
         break
@@ -98,15 +99,15 @@ export const getProjectRoot = (rootAST: SgNode<TypesMap, Kinds<TypesMap>>, cwd: 
 
   if (!rootPair) return cwd
 
-  const rootValNode = rootPair.children().at(-1)
+  const rootValNode = rootPair.children.at(-1)
   if (!rootValNode) return cwd
 
-  if (rootValNode.kind() !== 'string') {
-    console.warn(`⚠️ Ignoring non-literal vite.config root (${rootValNode.text()}); using ${cwd} as project root`)
+  if (rootValNode.type !== 'string') {
+    console.warn(`⚠️ Ignoring non-literal vite.config root (${rootValNode.text}); using ${cwd} as project root`)
     return cwd
   }
 
-  const rootVal = rootValNode.text()
+  const rootVal = rootValNode.text
   const match = rootVal.match(/^(['"`])(.*)\1$/s)
   if (match) return join(cwd, match[2])
 

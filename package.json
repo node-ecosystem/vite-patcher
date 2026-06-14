@@ -27,7 +27,7 @@
     "od": "yarn outdated"
   },
   "dependencies": {
-    "@ast-grep/napi": "^0.42.1"
+    "@codegraft/core": "0.1.0-beta.13"
   },
   "devDependencies": {
     "@types/node": "^25.6.0",

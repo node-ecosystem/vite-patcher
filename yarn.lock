@@ -14,105 +14,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@ast-grep/napi-darwin-arm64@npm:0.42.1":
-  version: 0.42.1
-  resolution: "@ast-grep/napi-darwin-arm64@npm:0.42.1"
-  conditions: os=darwin & cpu=arm64
-  languageName: node
-  linkType: hard
-
-"@ast-grep/napi-darwin-x64@npm:0.42.1":
-  version: 0.42.1
-  resolution: "@ast-grep/napi-darwin-x64@npm:0.42.1"
-  conditions: os=darwin & cpu=x64
-  languageName: node
-  linkType: hard
-
-"@ast-grep/napi-linux-arm64-gnu@npm:0.42.1":
-  version: 0.42.1
-  resolution: "@ast-grep/napi-linux-arm64-gnu@npm:0.42.1"
-  conditions: os=linux & cpu=arm64 & libc=glibc
-  languageName: node
-  linkType: hard
-
-"@ast-grep/napi-linux-arm64-musl@npm:0.42.1":
-  version: 0.42.1
-  resolution: "@ast-grep/napi-linux-arm64-musl@npm:0.42.1"
-  conditions: os=linux & cpu=arm64 & libc=musl
-  languageName: node
-  linkType: hard
-
-"@ast-grep/napi-linux-x64-gnu@npm:0.42.1":
-  version: 0.42.1
-  resolution: "@ast-grep/napi-linux-x64-gnu@npm:0.42.1"
-  conditions: os=linux & cpu=x64 & libc=glibc
-  languageName: node
-  linkType: hard
-
-"@ast-grep/napi-linux-x64-musl@npm:0.42.1":
-  version: 0.42.1
-  resolution: "@ast-grep/napi-linux-x64-musl@npm:0.42.1"
-  conditions: os=linux & cpu=x64 & libc=musl
-  languageName: node
-  linkType: hard
-
-"@ast-grep/napi-win32-arm64-msvc@npm:0.42.1":
-  version: 0.42.1
-  resolution: "@ast-grep/napi-win32-arm64-msvc@npm:0.42.1"
-  conditions: os=win32 & cpu=arm64
-  languageName: node
-  linkType: hard
-
-"@ast-grep/napi-win32-ia32-msvc@npm:0.42.1":
-  version: 0.42.1
-  resolution: "@ast-grep/napi-win32-ia32-msvc@npm:0.42.1"
-  conditions: os=win32 & cpu=ia32
-  languageName: node
-  linkType: hard
-
-"@ast-grep/napi-win32-x64-msvc@npm:0.42.1":
-  version: 0.42.1
-  resolution: "@ast-grep/napi-win32-x64-msvc@npm:0.42.1"
-  conditions: os=win32 & cpu=x64
-  languageName: node
-  linkType: hard
-
-"@ast-grep/napi@npm:^0.42.1":
-  version: 0.42.1
-  resolution: "@ast-grep/napi@npm:0.42.1"
-  dependencies:
-    "@ast-grep/napi-darwin-arm64": "npm:0.42.1"
-    "@ast-grep/napi-darwin-x64": "npm:0.42.1"
-    "@ast-grep/napi-linux-arm64-gnu": "npm:0.42.1"
-    "@ast-grep/napi-linux-arm64-musl": "npm:0.42.1"
-    "@ast-grep/napi-linux-x64-gnu": "npm:0.42.1"
-    "@ast-grep/napi-linux-x64-musl": "npm:0.42.1"
-    "@ast-grep/napi-win32-arm64-msvc": "npm:0.42.1"
-    "@ast-grep/napi-win32-ia32-msvc": "npm:0.42.1"
-    "@ast-grep/napi-win32-x64-msvc": "npm:0.42.1"
-  dependenciesMeta:
-    "@ast-grep/napi-darwin-arm64":
-      optional: true
-    "@ast-grep/napi-darwin-x64":
-      optional: true
-    "@ast-grep/napi-linux-arm64-gnu":
-      optional: true
-    "@ast-grep/napi-linux-arm64-musl":
-      optional: true
-    "@ast-grep/napi-linux-x64-gnu":
-      optional: true
-    "@ast-grep/napi-linux-x64-musl":
-      optional: true
-    "@ast-grep/napi-win32-arm64-msvc":
-      optional: true
-    "@ast-grep/napi-win32-ia32-msvc":
-      optional: true
-    "@ast-grep/napi-win32-x64-msvc":
-      optional: true
-  checksum: 10c0/560c360522a98cff508bdb0d839c36d364afd296a8b04d2193ad63fdec352c949d803565cde74c11f7d496e8e6f2f105ed6129ebbd9f9f4e286f39a2eed14f02
-  languageName: node
-  linkType: hard
-
 "@babel/code-frame@npm:^7.28.6, @babel/code-frame@npm:^7.29.0":
   version: 7.29.0
   resolution: "@babel/code-frame@npm:7.29.0"
@@ -365,6 +266,15 @@ __metadata:
     "@brillout/import": "npm:^0.2.6"
     "@brillout/picocolors": "npm:^1.0.26"
   checksum: 10c0/e34cabfb51a3380fe053ce5c76f7afd04b2dd952f6b46307705226d984772c090311bd86daca2a7d181275211bc19417b3e79229fb443f87c3d4f764730068f7
+  languageName: node
+  linkType: hard
+
+"@codegraft/core@npm:0.1.0-beta.13":
+  version: 0.1.0-beta.13
+  resolution: "@codegraft/core@npm:0.1.0-beta.13"
+  dependencies:
+    magic-string: "npm:^0.30.0"
+  checksum: 10c0/db161f4e5925d26805053dc9ead6de719936077e687f9f205efa9d14c052e52e3915c5710d078842492f92b68d310448d71fef83b1982b374bacd4b180198e50
   languageName: node
   linkType: hard
 
@@ -2676,7 +2586,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"magic-string@npm:^0.30.17, magic-string@npm:^0.30.21":
+"magic-string@npm:^0.30.0, magic-string@npm:^0.30.17, magic-string@npm:^0.30.21":
   version: 0.30.21
   resolution: "magic-string@npm:0.30.21"
   dependencies:
@@ -3600,7 +3510,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "vite-patcher@workspace:."
   dependencies:
-    "@ast-grep/napi": "npm:^0.42.1"
+    "@codegraft/core": "npm:0.1.0-beta.13"
     "@types/node": "npm:^25.6.0"
     "@yarnpkg/sdks": "npm:^3.2.3"
     eslint: "npm:^10.2.1"

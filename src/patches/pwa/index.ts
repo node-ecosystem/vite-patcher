@@ -2,9 +2,9 @@
 
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { parse } from '@ast-grep/napi'
 
 import { installVitePlugin } from '../packageManager.ts'
+import { findAll, getCallFunctionName, parseRoot } from '../codegraft.ts'
 import { createFolder, getPath, getPluginsData, getProjectRoot, getTrivia, getViteConfigPath, isVikePluginUsed } from '../utils.ts'
 
 export default async function pwa() {
@@ -28,32 +28,32 @@ const patchViteConfig = async (
   console.log(`⏳ Patching file ${viteConfigPath} …`)
 
   try {
-    let rootAST = parse(lang, viteConfigCode).root()
+    let rootAST = await parseRoot(lang, viteConfigCode)
 
-    // eslint-disable-next-line unicorn/prefer-array-some
-    const isAlreadyPatched = !!rootAST.find({ rule: { pattern: 'VitePWA($$$)' } })
+    const isAlreadyPatched = findAll(rootAST, 'call_expression')
+      .some(call => getCallFunctionName(call) === 'VitePWA')
     if (isAlreadyPatched) {
       console.log(`ℹ️  vite-plugin-pwa is already configured in ${viteConfigPath}`)
       return viteConfigCode
     }
 
     // Add import statement
-    const imports = rootAST.findAll({ rule: { kind: 'import_statement' } })
+    const imports = findAll(rootAST, 'import_statement')
     const hasPWAImport = viteConfigCode.includes('vite-plugin-pwa') && imports.some((imp) => {
-      const sourceString = imp.children().find(c => c.kind() === 'string')?.text()
+      const sourceString = imp.children.find(c => c.type === 'string')?.text
       const isPwaImport = sourceString === "'vite-plugin-pwa'" || sourceString === '"vite-plugin-pwa"'
-      return isPwaImport && imp.text().includes('VitePWA')
+      return isPwaImport && imp.text.includes('VitePWA')
     })
     if (!hasPWAImport) {
       const vitePWAImport = `import { VitePWA } from ${quote}vite-plugin-pwa${quote}`
       if (imports.length > 0) {
         const lastImport = imports.at(-1)!
-        const pos = lastImport.range().end.index
+        const pos = lastImport.documentEndIndex
         viteConfigCode = `${viteConfigCode.slice(0, pos)}${eol}${vitePWAImport}${viteConfigCode.slice(pos)}`
       } else {
         viteConfigCode = `${vitePWAImport}${eol}${viteConfigCode}`
       }
-      rootAST = parse(lang, viteConfigCode).root()
+      rootAST = await parseRoot(lang, viteConfigCode)
     }
 
     const pluginData = getPluginsData(rootAST)
@@ -69,7 +69,7 @@ const patchViteConfig = async (
 
     let pluginsArray = pluginData.arr
     if (!pluginsArray) {
-      const objStartPos = targetObj.range().start.index
+      const objStartPos = targetObj.documentStartIndex
       let objIndent = ''
       const objLineStart = viteConfigCode.lastIndexOf('\n', objStartPos)
       if (objLineStart !== -1) {
@@ -81,9 +81,9 @@ const patchViteConfig = async (
       let newPropIndent = `${objIndent}${indent}`
 
       // If object has properties, try to copy the first property's indentation
-      const firstProp = targetObj.children().find(c => c.kind() === 'pair')
+      const firstProp = targetObj.children.find(c => c.type === 'pair')
       if (firstProp) {
-        const propStartPos = firstProp.range().start.index
+        const propStartPos = firstProp.documentStartIndex
         const propLineStart = viteConfigCode.lastIndexOf('\n', propStartPos)
         if (propLineStart !== -1) {
           const propIndentMatch = viteConfigCode.slice(propLineStart + 1, propStartPos).match(/^[ \t]*/)
@@ -93,11 +93,11 @@ const patchViteConfig = async (
 
       const insertPos = objStartPos + 1
       viteConfigCode = `${viteConfigCode.slice(0, insertPos)}${eol}${newPropIndent}plugins: [],${viteConfigCode.slice(insertPos)}`
-      rootAST = parse(lang, viteConfigCode).root()
+      rootAST = await parseRoot(lang, viteConfigCode)
       pluginsArray = getPluginsData(rootAST).arr!
     }
 
-    const pluginsPos = pluginsArray!.range().start.index // '[' pos
+    const pluginsPos = pluginsArray!.documentStartIndex // '[' pos
     const pluginsLineStart = viteConfigCode.lastIndexOf('\n', pluginsPos)
     let baseIndent = ''
     if (pluginsLineStart !== -1) {
@@ -109,32 +109,14 @@ const patchViteConfig = async (
     }
 
     // Extract raw code inside brackets
-    const arrayEndPos = pluginsArray!.range().end.index - 1
+    const arrayEndPos = pluginsArray!.documentEndIndex - 1
     let before = viteConfigCode.slice(0, arrayEndPos)
     const after = viteConfigCode.slice(arrayEndPos)
 
-    const arrChildren = pluginsArray!.children()
-    let lastElemIndex = -1
-    for (let i = arrChildren.length - 1; i >= 0; i--) {
-      const kind = arrChildren[i].kind() as string
-      if (kind !== '[' && kind !== ']' && kind !== ',' && kind !== 'comment') {
-        lastElemIndex = i
-        break
-      }
-    }
-
-    const lastElem = lastElemIndex >= 0 ? arrChildren[lastElemIndex] : null
+    const lastElem = pluginsArray!.children.at(-1) ?? null
     if (lastElem) {
-      const lastElemEnd = lastElem.range().end.index
-      let hasCommaAfterLastElem = false
-      for (let i = lastElemIndex + 1; i < arrChildren.length; i++) {
-        const kind = arrChildren[i].kind() as string
-        if (kind === ',') {
-          hasCommaAfterLastElem = true
-          break
-        }
-        if (kind !== 'comment' && kind !== ']') break
-      }
+      const lastElemEnd = lastElem.documentEndIndex
+      const hasCommaAfterLastElem = viteConfigCode.slice(lastElemEnd, arrayEndPos).includes(',')
       if (!hasCommaAfterLastElem) {
         before = `${viteConfigCode.slice(0, lastElemEnd)},${viteConfigCode.slice(lastElemEnd, arrayEndPos)}`
       }
@@ -192,7 +174,7 @@ const patchVikeHeadManifest = async (
   }
 
   // Parse vite.config to find vike plugins and root instead of executing it
-  const rootAST = parse(lang, viteConfigCode).root()
+  const rootAST = await parseRoot(lang, viteConfigCode)
 
   if (!isVikePluginUsed(rootAST)) {
     console.warn(`⚠️ ${SKIP_MESSAGE} Vike not detected in vite.config plugins`)
