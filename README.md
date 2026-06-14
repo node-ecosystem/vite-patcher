@@ -12,9 +12,9 @@ Inject Vite Plugins and related configurations without any effort into your [vit
 
 ## ℹ️ Supported Plugins
 
-| Command | Plugin | Description
-| - | - | -
-| [pwa](./src/patches/pwa/README.md) | [vite-plugin-pwa](https://www.npmjs.com/package/vite-plugin-pwa) | Add [Progressive Web App (PWA)](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps) support. *Supports [vike](https://www.npmjs.com/package/vike) as well.*
+| Command | Plugin | Vike | Description
+| - | - | - | -
+| [pwa](./src/patches/pwa/README.md) | [vite-plugin-pwa](https://www.npmjs.com/package/vite-plugin-pwa) | ✅ | Add [Progressive Web App (PWA)](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps) support.
 
 ## ⚙️ Installation
 
